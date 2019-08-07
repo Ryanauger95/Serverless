@@ -1,0 +1,34 @@
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: txn
+frameworkVersion: ">=1.1.0 <2.0.0"
+app: rest-api-txn
+org: ryanauger
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: us-east-1
+  environment:
+    AWS_MYSQL_HOST: esgrodb.cmuwidwxnyfk.us-east-1.rds.amazonaws.com
+    AWS_MYSQL_USERNAME: esgro
+    AWS_MYSQL_DBNAME: esgro_db_dev
+    AWS_MYSQL_PASSWORD: vEcwAibpBgG5zrRtphtJ
+
+functions:
+  create:
+    handler: controllers/create.create
+    events:
+      - http:
+          path: txn
+          method: post
+          cors: true
+  retreive:
+    handler: controllers/retreive.retreive
+    events:
+      - http:
+          path: txn/{txn_id}
+          method: get
+          cors: true
