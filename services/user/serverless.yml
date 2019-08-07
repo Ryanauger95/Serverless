@@ -25,3 +25,15 @@ functions:
           path: user
           method: post
           cors: true
+  user-fetch:
+    handler: controllers/user.fetch
+    events:
+      - http:
+          path: user/{user_id}
+          method: get
+          cors: true
+
+package:
+  include:
+    - ../../lib/
+  excludeDevDependencies: false
