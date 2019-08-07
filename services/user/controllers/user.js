@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const {User} = require('../lib/models/userModel');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
+const SNS = require('../lib/handlers/sns')
 
 
 /*
@@ -29,6 +30,12 @@ async function register(event) {
       email: body.email,
       password: body.password,
     });
+
+    const res = await SNS.publish('user-registered', JSON.stringify({
+      'user_id': user.id,
+    }));
+    console.log(res);
+
 
     // Build reply
     response = {

@@ -2,7 +2,7 @@
     "body": { 
 	"first_name": "Test First",
     	"last_name": "Test Last",
-    	"email": "test2@email.com",
+    	"email": "test11@email.com",
     	"password": "Test Password"
 	}
 }

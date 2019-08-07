@@ -12,10 +12,15 @@ provider:
   stage: dev
   region: us-east-1
   environment:
-    AWS_MYSQL_HOST: esgrodb.cmuwidwxnyfk.us-east-1.rds.amazonaws.com
-    AWS_MYSQL_USERNAME: esgro
-    AWS_MYSQL_DBNAME: esgro_db_dev
-    AWS_MYSQL_PASSWORD: vEcwAibpBgG5zrRtphtJ
+    AWS_MYSQL_HOST: ${env:AWS_MYSQL_HOST}
+    AWS_MYSQL_USERNAME: ${env:AWS_MYSQL_USERNAME}
+    AWS_MYSQL_DBNAME: ${env:AWS_MYSQL_DBNAME}
+    AWS_MYSQL_PASSWORD: ${env:AWS_MYSQL_PASSWORD}
+    AWS_KEY: ${env:AWS_KEY}
+    AWS_SECRET: ${env:AWS_SECRET}
+    AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
+    AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
+    # AWS_USER_WALLET_REGISTERED_TOPIC_ARN:
 
 functions:
   user-register:
@@ -34,6 +39,4 @@ functions:
           cors: true
 
 package:
-  include:
-    - ../../lib/
   excludeDevDependencies: false
