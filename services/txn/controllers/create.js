@@ -1,5 +1,6 @@
 const model = require('../model/txn');
 const Joi = require('joi');
+const {parseAndValidate}= require('../../../lib/handlers/bodyParser');
 
 // POST Body format validator
 const schema = Joi.object().keys({
@@ -16,18 +17,18 @@ async function create(event) {
   let response = {};
   try {
     console.log('Event: ', event);
-    const body = JSON.parse(event.body);
-    // const body = event;
-    const {error} = schema.validate(body);
-    if (error !== null) {
-      throw Error('Validation failed with an error');
-    }
+
+    // Parse and validate POST body
+    const body = parseAndValidate(event.body, schema);
+
+    // Save TXN
     const txnId = await model.save(
         body.amount, body.reserve,
         body.description, body.payer,
         body.collector, body.originator,
         body.holding_period);
 
+    // Build reply
     response = {
       statusCode: 200,
       body: JSON.stringify({

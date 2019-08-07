@@ -1,4 +1,4 @@
-const knex = require('../handlers/mysql').knex;
+const knex = require('../../../lib/handlers/mysql').knex;
 
 const deal_state = {
   dispute: -3,
