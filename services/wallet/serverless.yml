@@ -1,10 +1,5 @@
-# For full config options, check the docs:
-#    docs.serverless.com
-
-service: user
+service: wallet
 frameworkVersion: ">=1.1.0 <2.0.0"
-app: rest-api-user
-org: ryanauger
 
 provider:
   name: aws
@@ -20,23 +15,13 @@ provider:
     AWS_SECRET: ${env:AWS_SECRET}
     AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
     AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
-    # AWS_USER_WALLET_REGISTERED_TOPIC_ARN:
+    AWS_USER_WALLET_REGISTERED_TOPIC_ARN: ${env:AWS_USER_WALLET_REGISTERED_TOPIC_ARN}
 
 functions:
-  user-create:
-    handler: controllers/user.register
+  wallet-create:
+    handler: controllers/wallet.create
     events:
       - http:
-          path: user
+          path: /user/{user_id}/wallet
           method: post
           cors: true
-  user-fetch:
-    handler: controllers/user.fetch
-    events:
-      - http:
-          path: user/{user_id}
-          method: get
-          cors: true
-
-package:
-  excludeDevDependencies: false

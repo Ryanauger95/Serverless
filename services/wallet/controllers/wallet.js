@@ -1,7 +1,10 @@
 const Joi = require('joi');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 const {User} = require('../lib/models/userModel');
-const bankProxy = require('../lib/handlers/bankProxy');
+const {getActiveWallets} = require('../lib/models/walletModel');
+const bankController = require('../controllers/silaController');
+const SNS = require('../lib/handlers/sns');
+
 
 // POST Body format validator
 const schema = Joi.object().keys({
@@ -17,7 +20,7 @@ const schema = Joi.object().keys({
 // If the user exists, and does not have any active account,
 // then we use the bank shem
 async function create(event) {
-  const response = {};
+  const response = {statusCode: 400};
   try {
     console.log('Event: ', event);
 
@@ -31,8 +34,19 @@ async function create(event) {
     const user = await User.query().findById(userId);
     console.log(user);
 
-    // Call bank proxy
-    const bankReg = bankProxy.register({
+    // Fetch the user's wallet info from the database
+    // and make sure that one does not
+    // Already exist
+    const wallet = await getActiveWallets(userId);
+    console.log('Active Wallets: ', wallet);
+    if (wallet.length > 0 ) {
+      throw Error('User already has an active wallet');
+    }
+
+    // Register with our banking provider
+    // Abstracted away banking provider into
+    // bankController
+    await bankController.register(userId, {
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
@@ -41,12 +55,23 @@ async function create(event) {
       address_2: body.address_2,
       city: body.city,
       state: body.state,
-      zip: body.zip,
-      ssn: body.ssn,
+      zip: String(body.zip),
+      ssn: String(body.ssn),
     });
-    console.log(bankReg);
+
+    // Post to an SNS topic that a wallet has been created
+    const res = await SNS.publish('user-wallet-registered', JSON.stringify({
+      'user_id': userId,
+      'wallet': 'sila',
+    }));
+    console.log('SNS Result: ', res);
+
+    // Build response
+    response.statusCode = 200;
+    response.body = JSON.stringify({'message': 'Successfully Registered'});
   } catch (err) {
     console.log('Error: ', err);
+    response.body = JSON.stringify({'message': err.message});
   }
   return response;
 }
@@ -54,3 +79,4 @@ async function create(event) {
 module.exports = {
   create: create,
 };
+
