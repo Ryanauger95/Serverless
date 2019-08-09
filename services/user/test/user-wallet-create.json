@@ -1,0 +1,11 @@
+{
+  "pathParameters": { "user_id": "1" },
+  "body": {
+    "address_1": "331 Carpenter Dr",
+    "address_2": "Unit 6",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": 30328,
+    "ssn": 123456789
+  }
+}

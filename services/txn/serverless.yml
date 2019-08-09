@@ -18,17 +18,20 @@ provider:
     AWS_MYSQL_PASSWORD: vEcwAibpBgG5zrRtphtJ
 
 functions:
-  create:
+  txn-create:
     handler: controllers/create.create
     events:
       - http:
           path: txn
           method: post
           cors: true
-  retreive:
+  txn-fetch:
     handler: controllers/retreive.retreive
     events:
       - http:
           path: txn/{txn_id}
           method: get
           cors: true
+          # authorizer:
+          #   name: esgro-users-authorizer
+          #   arn: arn:aws:cognito-idp:us-east-1:532299806817:userpool/us-east-1_289MZHUoN

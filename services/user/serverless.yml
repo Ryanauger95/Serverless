@@ -23,7 +23,7 @@ provider:
     # AWS_USER_WALLET_REGISTERED_TOPIC_ARN:
 
 functions:
-  user-register:
+  user-create:
     handler: controllers/user.register
     events:
       - http:
@@ -35,6 +35,20 @@ functions:
     events:
       - http:
           path: user/{user_id}
+          method: get
+          cors: true
+  user-wallet-create:
+    handler: controllers/wallet.create
+    events:
+      - http:
+          path: user/{user_id}/wallet
+          method: post
+          cors: true
+  user-wallet-fetch:
+    handler: controllers/wallet.create
+    events:
+      - http:
+          path: user/{user_id}/wallet
           method: get
           cors: true
 

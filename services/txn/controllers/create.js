@@ -1,6 +1,6 @@
 const model = require('../model/txn');
 const Joi = require('joi');
-const {parseAndValidate}= require('../../../lib/handlers/bodyParser');
+const {parseAndValidate}= require('../lib/handlers/bodyParser');
 
 // POST Body format validator
 const schema = Joi.object().keys({

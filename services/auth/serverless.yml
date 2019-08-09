@@ -1,0 +1,29 @@
+
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: auth
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: us-east-1
+  environment:
+    AWS_MYSQL_HOST: ${env:AWS_MYSQL_HOST}
+    AWS_MYSQL_USERNAME: ${env:AWS_MYSQL_USERNAME}
+    AWS_MYSQL_DBNAME: ${env:AWS_MYSQL_DBNAME}
+    AWS_MYSQL_PASSWORD: ${env:AWS_MYSQL_PASSWORD}
+
+functions:
+  auth:
+    handler: controllers/user.fetch
+    events:
+      - http:
+          path: user/{user_id}
+          method: get
+          cors: true
+
+package:
+  excludeDevDependencies: false
