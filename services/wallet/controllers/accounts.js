@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const {SilaWallet} = require('../lib/models/walletModel');
-const bankController = require('../../../lib/controllers/sila');
+const bankController = require('../lib/controllers/sila');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 
 
@@ -32,9 +32,10 @@ async function link(event) {
     const key = wallet.private_key;
     const linkAccount = await bankController.linkAccount(handle, key, publicToken);
     if (!linkAccount || linkAccount.status != 'SUCCESS') {
+      console.log('Account link error: ', linkAccount);
       throw Error('Failed to link account');
     }
-    response = {statusCode: 200};
+    response.statusCode = 200;
   } catch (err) {
     console.log('Account link error: ', err);
   }
@@ -60,10 +61,11 @@ async function get(event) {
     const handle = wallet.handle;
     const privateKey = wallet.private_key;
     const silaAccounts = await bankController.getAccounts(handle, privateKey);
+    console.log('silaAccounts: ', silaAccounts);
     if (!silaAccounts) {
       throw new Error('Failed to get accounts');
     }
-    console.log('silaAccounts: ', silaAccounts);
+
     response.statusCode = 200;
     response.body = JSON.stringify({accounts: silaAccounts});
   } catch (err) {

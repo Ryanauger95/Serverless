@@ -26,6 +26,14 @@ functions:
           path: /user/{user_id}/wallet
           method: post
           cors: true
+  wallet-fetch:
+    handler: controllers/wallet.fetch
+    events:
+      - http:
+          path: /user/{user_id}/wallet
+          method: get
+          cors: true
+
   wallet-kyc-check-all:
     handler: controllers/kyc.checkAll
     events:

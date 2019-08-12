@@ -1,8 +1,8 @@
 const Joi = require('joi');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 const {User} = require('../lib/models/userModel');
-const {getActiveWallets} = require('../lib/models/walletModel');
-const bankController = require('../../../lib/controllers/sila');
+const WalletModel = require('../lib/models/walletModel');
+const bankController = require('../lib/controllers/sila');
 const SNS = require('../lib/handlers/sns');
 
 
@@ -37,7 +37,7 @@ async function create(event) {
     // Fetch the user's wallet info from the database
     // and make sure that one does not
     // Already exist
-    const wallet = await getActiveWallets(userId);
+    const wallet = await WalletModel.getActiveWallets(userId);
     console.log('Active Wallets: ', wallet);
     if (wallet.length > 0 ) {
       throw Error('User already has an active wallet');
@@ -76,7 +76,31 @@ async function create(event) {
   return response;
 }
 
+async function fetch(event) {
+  const response = {statusCode: 400};
+  try {
+    console.log('Event: ', event);
+
+    // Fetch user_id
+    const userId = event['pathParameters']['user_id'];
+
+    // Check to make sure that a SILA account has been linked already
+    const [wallet] = await WalletModel.getWallet(userId);
+    if (!wallet) {
+      throw Error('No wallet for user');
+    }
+    response.body = JSON.stringify({handle: wallet.handle});
+    response.statusCode = 200;
+    return response;
+  } catch (err) {
+    console.log('Wallet error: ', err);
+  }
+  return response;
+}
+
+
 module.exports = {
-  create: create,
+  create,
+  fetch,
 };
 

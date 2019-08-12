@@ -2,14 +2,6 @@ const bankController = require('../lib/controllers/sila');
 const {SilaWallet} = require('../lib/models/walletModel');
 const SNS = require('../lib/handlers/sns');
 
-const KYC_STATE = {
-  UNKNOWN: -2,
-  FAILED: -1,
-  NOT_STARTED: 0,
-  PENDING: 1,
-  COMPLETED: 2,
-};
-
 
 async function checkAll() {
   try {
