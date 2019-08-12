@@ -19,5 +19,8 @@
   "devDependencies": {
     "eslint": "^5.10.0",
     "eslint-config-google": "^0.13.0"
+  },
+  "dependencies": {
+    "twilio": "^3.33.3"
   }
 }

@@ -37,6 +37,19 @@ functions:
           path: user/{user_id}
           method: get
           cors: true
-
+  user-update:
+    handler: controllers/user.update
+    events:
+      - http:
+          path: user/{user_id}
+          method: put
+          cors: true
+  user-validate:
+    handler: controllers/user.validate
+    events:
+      - http:
+          path: user/{user_id}/validate
+          method: post
+          cors: true
 package:
   excludeDevDependencies: false

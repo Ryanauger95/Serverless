@@ -1,4 +1,4 @@
-const model = require('../model/txn');
+const model = require('../lib/models/txn');
 const Joi = require('joi');
 
 async function retreive(event, context) {

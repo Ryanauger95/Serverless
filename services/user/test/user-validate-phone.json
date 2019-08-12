@@ -1,0 +1,6 @@
+{
+    "pathParameters": {"user_id": "1"},
+    "body": {
+    	"phone_otc": "8459"
+	}
+}

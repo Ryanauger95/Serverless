@@ -1,5 +1,5 @@
 const bankController = require('../lib/controllers/sila');
-const {SilaWallet} = require('../lib/models/walletModel');
+const {SilaWallet, KYC_STATE} = require('../lib/models/walletModel');
 const SNS = require('../lib/handlers/sns');
 
 
@@ -28,6 +28,12 @@ async function checkAll() {
 
       // Decode the response
       const kycState = decodeState(res.status, res.message);
+
+      // Increment the field for the # of times we've polled KYC
+      SilaWallet
+          .query()
+          .increment('kyc_poll_count', 1)
+          .where({address: wallet.address});
 
       // If the state has changed, write it to the database.
       // and publish to an SNS topic
@@ -73,6 +79,5 @@ function decodeState(status, message) {
 }
 
 module.exports = {
-  KYC_STATE,
   checkAll,
 };
