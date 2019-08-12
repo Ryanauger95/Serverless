@@ -12,11 +12,17 @@ async function checkAll() {
 
     console.log(wallets);
     const promises = [];
+    const incrementPromises = [];
     // Run Check KYC asynchronously and put the promises into an array
     for (let i = 0; i < wallets.length; i++) {
       const wallet = wallets[i];
       promises[i] = bankController
           .checkKYC(wallet.handle, wallet.private_key);
+      // Increment the field for the # of times we've polled KYC
+      incrementPromises[i] = SilaWallet
+          .query()
+          .increment('kyc_poll_count', 1)
+          .where({address: wallet.address});
     }
 
     // Go through our array of promises and wait for their completion
@@ -25,15 +31,11 @@ async function checkAll() {
     for (let i = 0; i < wallets.length; i++) {
       const wallet = wallets[i];
       const res = await promises[i];
+      await incrementPromises[i];
 
       // Decode the response
       const kycState = decodeState(res.status, res.message);
 
-      // Increment the field for the # of times we've polled KYC
-      SilaWallet
-          .query()
-          .increment('kyc_poll_count', 1)
-          .where({address: wallet.address});
 
       // If the state has changed, write it to the database.
       // and publish to an SNS topic

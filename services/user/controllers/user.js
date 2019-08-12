@@ -1,9 +1,10 @@
 const Joi = require('joi');
-const {User} = require('../lib/models/userModel');
+const UserModel = require('../lib/models/userModel');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 const SNS = require('../lib/handlers/sns');
 const SMS = require('../lib/handlers/sms');
 
+const User = UserModel.User;
 
 /*
  * Register
@@ -116,20 +117,12 @@ async function updatePhone(userId, phone) {
   const OTC = generateOTC();
 
   // Update the user's phone number and OTC in the database
-  await User
-      .query()
-      .findById(userId)
-      .update(
-          {
-            phone: phone,
-            phone_validated: false,
-            phone_otc: OTC,
-            phone_otc_ts: unixTime(),
-          });
+  await UserModel.updatePhone(userId, phone, OTC);
 
   // Send SMS
   console.log(`User(${userId}) sending OTC(${OTC})`);
-  await SMS.sendMessage(SMS.verificationSms(OTC), phone);
+  const smsRes = await SMS.sendMessage(SMS.verificationSms(OTC), phone);
+  console.log('SMS Result: ', smsRes);
 }
 
 /*
@@ -163,14 +156,14 @@ async function validate(event) {
 
 async function validatePhone(userId, OTC) {
   // Check if the OTC matches
-  const user = await User
-      .query()
-      .findById(userId);
-  const timeDiffMin = (unixTime() - user.phone_otc_ts)/60;
+  const user = await UserModel.getPhoneValidation(userId);
+  const otcTimeStamp = user.phone_otc_ts.getTime() / 1000;
+  const timeDiffMin = (unixTime() - otcTimeStamp)/60;
+  console.log(`unixTime(${unixTime()} - otcTimeStamp(${otcTimeStamp}) = ${timeDiffMin})`);
   if (user.phone_otc != OTC) {
     throw Error('Incorrect OTC');
-  } else if (timeDiffMin < 5) {
-    throw Error('Too much time has elapsed for OTC');
+  } else if (timeDiffMin > 5) {
+    throw Error(`Too much time(${timeDiffMin}) has elapsed for OTC`);
   }
   await User.query().findById(userId).update({phone_validated: true});
 }

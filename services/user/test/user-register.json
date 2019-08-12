@@ -1,8 +1,8 @@
 {
-    "body": { 
+    "body": {
 	"first_name": "Test First",
     	"last_name": "Test Last",
-    	"email": "test11@email.com",
+    	"email": "test12@email.com",
     	"password": "Test Password"
 	}
 }

@@ -1,6 +1,6 @@
 {
-    "pathParameters": {"user_id": "1"},
+    "pathParameters": {"user_id": "63"},
     "body": {
-    	"phone_otc": "8459"
+    	"phone_otc": "1079"
 	}
 }
