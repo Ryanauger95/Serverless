@@ -3,7 +3,7 @@ const Joi = require('joi');
 
 async function retreive(event, context) {
   console.log(event);
-  let response = {statusCode: 500};
+  let response = {statusCode: 400};
   try {
     const txnId = event['pathParameters']['txn_id'];
     console.log('TXNID: ', txnId);
