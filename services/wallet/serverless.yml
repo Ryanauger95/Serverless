@@ -16,6 +16,7 @@ provider:
     AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
     AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
     AWS_USER_WALLET_REGISTERED_TOPIC_ARN: ${env:AWS_USER_WALLET_REGISTERED_TOPIC_ARN}
+    AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN: ${env:AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN}
 
 functions:
   wallet-create:
@@ -24,4 +25,22 @@ functions:
       - http:
           path: /user/{user_id}/wallet
           method: post
+          cors: true
+  wallet-kyc-check-all:
+    handler: controllers/kyc.checkAll
+    events:
+      - schedule: rate(15 minutes)
+  wallet-link_account:
+    handler: controllers/accounts.link
+    events:
+      - http:
+          path: /user/{user_id}/wallet/accounts
+          method: post
+          cors: true
+  wallet-get_accounts:
+    handler: controllers/accounts.get
+    events:
+      - http:
+          path: /user/{user_id}/wallet/accounts
+          method: get
           cors: true

@@ -1,0 +1,6 @@
+{
+    "pathParameters": { "user_id": "1" },
+    "body": {
+        "public_token": "abc"
+    }
+  }

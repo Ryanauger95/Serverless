@@ -14,4 +14,5 @@ export AWS_DEPLOY_REGION="us-east-1"
 ##
 export AWS_USER_REGISTERED_TOPIC_ARN="arn:aws:sns:us-east-1:532299806817:user-registered"
 export AWS_USER_WALLET_REGISTERED_TOPIC_ARN="arn:aws:sns:us-east-1:532299806817:user-wallet-registered"
+export AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN="arn:aws:sns:us-east-1:532299806817:user-wallet-kyc_changed"
 

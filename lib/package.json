@@ -19,7 +19,8 @@
     "mysql": "^2.17.1",
     "objection": "^1.6.9",
     "request": "^2.88.0",
-    "request-promise": "^4.2.4"
+    "request-promise": "^4.2.4",
+    "sila-sdk": "^0.2.2"
   },
   "devDependencies": {
     "eslint": "^6.1.0",
