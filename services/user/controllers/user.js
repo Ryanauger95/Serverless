@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const UserModel = require('../lib/models/userModel');
+const UserModel = require('../lib/models/user');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 const SNS = require('../lib/handlers/sns');
 const SMS = require('../lib/handlers/sms');

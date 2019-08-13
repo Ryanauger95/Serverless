@@ -20,6 +20,6 @@ provider:
 
 functions:
   issue-funds-all:
-    handler: controllers/issueFunds.issueAll
+    handler: controllers/issueFunds.issueFunds
     events:
       - schedule: rate(15 minutes)

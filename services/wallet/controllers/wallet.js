@@ -1,7 +1,7 @@
 const Joi = require('joi');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
-const {User} = require('../lib/models/userModel');
-const WalletModel = require('../lib/models/walletModel');
+const {User} = require('../lib/models/user');
+const WalletModel = require('../lib/models/wallet');
 const bankController = require('../lib/controllers/sila');
 const SNS = require('../lib/handlers/sns');
 

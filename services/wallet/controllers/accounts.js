@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const {SilaWallet} = require('../lib/models/walletModel');
+const {SilaWallet} = require('../lib/models/wallet');
 const bankController = require('../lib/controllers/sila');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 

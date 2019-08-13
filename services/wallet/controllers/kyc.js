@@ -1,5 +1,5 @@
 const bankController = require('../lib/controllers/sila');
-const {SilaWallet, KYC_STATE} = require('../lib/models/walletModel');
+const {SilaWallet, KYC_STATE} = require('../lib/models/wallet');
 const SNS = require('../lib/handlers/sns');
 
 
