@@ -19,7 +19,7 @@ provider:
     AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN: ${env:AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN}
 
 functions:
-  draw-funds-all:
+  issue-funds-all:
     handler: controllers/issueFunds.issueAll
     events:
       - schedule: rate(15 minutes)
