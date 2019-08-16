@@ -35,6 +35,8 @@ async function link(event) {
       console.log('Account link error: ', linkAccount);
       throw Error('Failed to link account');
     }
+    // Untested
+    await SilaWallet.query().patch({bank_linked: true}).where({handle: handle});
     response.statusCode = 200;
   } catch (err) {
     console.log('Account link error: ', err);

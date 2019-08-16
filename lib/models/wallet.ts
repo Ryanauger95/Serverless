@@ -10,6 +10,11 @@ const KYC_STATE = {
   COMPLETED: 2
 };
 
+const OWNER_TYPE = {
+  USER: 0,
+  ESGRO: 1
+};
+
 const silaTableName: string = "sila_wallet";
 class SilaWallet extends Model {
   // The insert function simply requires that
@@ -51,39 +56,28 @@ class SilaWallet extends Model {
       await trx(silaTableName).insert(data);
     });
   }
-}
+  static getWallet(userId) {
+    return SilaWallet.query()
+      .select("*")
+      .where({ active: 1, app_users_id: userId });
+  }
 
-async function getWallet(userId) {
-  return SilaWallet.query()
-    .select("*")
-    .where({ active: 1, app_users_id: userId });
-}
+  static getActiveWallets(userId) {
+    return knex(silaTableName)
+      .select("*")
+      .where({ app_users_id: userId, active: 1 });
+  }
+  static getWallets(userId) {
+    return knex(silaTableName)
+      .select("*")
+      .where({ app_users_id: userId });
+  }
 
-function getActiveWallets(userId) {
-  return knex(silaTableName)
-    .select("*")
-    .where({ app_users_id: userId, active: 1 });
+  static getKYCPending() {
+    return knex(silaTableName)
+      .select("*")
+      .where({ active: 1, kyc_state: KYC_STATE["PENDING"] });
+  }
 }
-function getWallets(userId) {
-  return knex(silaTableName)
-    .select("*")
-    .where({ app_users_id: userId });
-}
-
-function getKYCPending() {
-  return knex(silaTableName)
-    .select("*")
-    .where({ active: 1, kyc_state: KYC_STATE["PENDING"] });
-}
-
-// module.exports = {
-//   SilaWallet,
-//   getWallets,
-//   getWallet,
-//   getActiveWallets,
-//   getKYCPending,
-//   KYC_STATE,
-// };
 
 export { SilaWallet, KYC_STATE };
-// export {getWallet, getWallets, getActiveWallets, getKYCPending}

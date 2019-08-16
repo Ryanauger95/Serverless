@@ -1,15 +1,15 @@
 import { Model, knex } from "../handlers/mysql";
 import { SilaWallet } from "./wallet";
 
-const DEAL_STATE = {
-  DISPUTE: -3,
-  TIMEOUT: -2,
-  CANCELLED: -1,
-  PENDING: 0,
-  PROGRESS: 1,
-  REVIEW: 2,
-  FINISHED: 3
-};
+enum DEAL_STATE {
+  DISPUTE = -3,
+  TIMEOUT = -2,
+  CANCELLED = -1,
+  PENDING = 0,
+  PROGRESS = 1,
+  REVIEW = 2,
+  FINISHED = 3
+}
 enum FUND_STATE {
   NOT_FUNDED = 0,
   FUNDED = 1
@@ -48,10 +48,11 @@ class Txn extends Model {
       }
     };
   }
-  markFunded() {
+  static markFunded() {
     console.log("Funded");
   }
 }
+
 function retreive(txnId) {
   return knex("txn")
     .select("*")

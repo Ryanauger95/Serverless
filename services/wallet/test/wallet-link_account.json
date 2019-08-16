@@ -1,6 +1,6 @@
 {
-    "pathParameters": { "user_id": "1" },
+    "pathParameters": { "user_id": "65" },
     "body": {
-        "public_token": "public-sandbox-112586e8-d230-48e1-b42a-56be96e0be48"
+        "public_token": "public-sandbox-5d3abf88-0106-495e-be1b-a4216032651b"
     }
   }

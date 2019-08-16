@@ -1,11 +1,11 @@
 {
-  "pathParameters": { "user_id": "1" },
+  "pathParameters": { "user_id": "66" },
   "body": {
-    "address_1": "331 Carpenter Dr",
-    "address_2": "Unit 6",
-    "city": "Atlanta",
-    "state": "GA",
-    "zip": 30328,
-    "ssn": 123456789
+    "address_1": "4517 Country Ln",
+    "address_2": "",
+    "city": "Charlotte",
+    "state": "NC",
+    "zip": 28270,
+    "ssn": 123452222
   }
 }

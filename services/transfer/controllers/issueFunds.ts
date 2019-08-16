@@ -3,13 +3,16 @@ import { Txn, FUND_STATE } from "../lib/models/txn";
 import { Ledger, LEDGER_STATE, SILA_HANDLE } from "../lib/models/ledger";
 import * as bankController from "../lib/controllers/sila.js";
 
+// For each transaction that is not funded,
+// if the payer is lacking funds
 async function issueFunds() {
   try {
     // Select all transactions in which
     // 1) The payer's KYC has completed and
-    // 2) The txn is in a NOT_FUNDED state
+    // 2) The payer's bank has been linked and
+    // 3) The txn is in a NOT_FUNDED state
     const txns = await fetchNotFundedTransactions();
-    console.log("Txn Res: ", txns);
+    console.log("Un-Funded Transactions: ", txns);
 
     // For each Transaction
     // 1) Check the ledger for amount canceled, pending, and complete
@@ -27,7 +30,7 @@ async function issueFunds() {
       console.log(
         `Failed = ${totalFailed}, \t Pending = ${totalPending}, \t Completed = ${totalComplete}`
       );
-
+      continue;
       // a)
       if (totalFailed > 0) {
         throw Error("Failed!");
@@ -95,7 +98,8 @@ function fetchNotFundedTransactions() {
     .where({
       "txn.fund_state": FUND_STATE["NOT_FUNDED"],
       "payer_wallet.active": true,
-      "payer_wallet.kyc_state": KYC_STATE["COMPLETED"]
+      "payer_wallet.kyc_state": KYC_STATE["COMPLETED"],
+      "payer_wallet.bank_linked": true
     });
 }
 

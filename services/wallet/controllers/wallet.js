@@ -1,7 +1,7 @@
 const Joi = require('joi');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 const {User} = require('../lib/models/user');
-const WalletModel = require('../lib/models/wallet');
+const {SilaWallet} = require('../lib/models/wallet');
 const bankController = require('../lib/controllers/sila');
 const SNS = require('../lib/handlers/sns');
 
@@ -9,7 +9,7 @@ const SNS = require('../lib/handlers/sns');
 // POST Body format validator
 const schema = Joi.object().keys({
   address_1: Joi.string().required(),
-  address_2: Joi.string().required(),
+  address_2: Joi.string().allow(''),
   city: Joi.string().required(),
   state: Joi.string().required(),
   zip: Joi.number().required(),
@@ -37,7 +37,7 @@ async function create(event) {
     // Fetch the user's wallet info from the database
     // and make sure that one does not
     // Already exist
-    const wallet = await WalletModel.getActiveWallets(userId);
+    const wallet = await SilaWallet.getActiveWallets(userId);
     console.log('Active Wallets: ', wallet);
     if (wallet.length > 0 ) {
       throw Error('User already has an active wallet');
@@ -57,6 +57,7 @@ async function create(event) {
       state: body.state,
       zip: String(body.zip),
       ssn: String(body.ssn),
+      public_token: body.public_token,
     });
 
     // Post to an SNS topic that a wallet has been created
@@ -85,7 +86,7 @@ async function fetch(event) {
     const userId = event['pathParameters']['user_id'];
 
     // Check to make sure that a SILA account has been linked already
-    const [wallet] = await WalletModel.getWallet(userId);
+    const [wallet] = await SilaWallet.getWallet(userId);
     if (!wallet) {
       throw Error('No wallet for user');
     }

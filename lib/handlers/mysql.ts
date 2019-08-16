@@ -2,7 +2,7 @@
  * MySQL Database Handler
  */
 import * as Envvar from "envvar";
-import * as Objection from "objection";
+import { transaction, Model } from "objection";
 import * as Knex from "knex";
 const knex = Knex({
   client: "mysql",
@@ -15,8 +15,8 @@ const knex = Knex({
   pool: { min: 1, max: 1 }
 });
 
-const Model = Objection.Model;
 Model.knex(knex);
 
 export { knex };
 export { Model };
+export { transaction };

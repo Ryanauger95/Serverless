@@ -18,6 +18,7 @@ async function checkAll() {
       const wallet = wallets[i];
       promises[i] = bankController
           .checkKYC(wallet.handle, wallet.private_key);
+
       // Increment the field for the # of times we've polled KYC
       incrementPromises[i] = SilaWallet
           .query()
@@ -39,6 +40,15 @@ async function checkAll() {
 
       // If the state has changed, write it to the database.
       // and publish to an SNS topic
+      if (kycState === KYC_STATE['PENDING']) {
+        bankController
+            .requestKYC({handle: wallet.handle}, wallet.private_key)
+            .then((res) => {
+              console.log('requestKYC success: ', res);
+            }).catch((res) => {
+              console.log('requestKYC failed: ', res);
+            });
+      }
       if (kycState != wallet.kyc_state) {
         console.log('KYC State changed from ', wallet.kyc_state,
             ' to ', kycState);
@@ -67,6 +77,7 @@ async function checkAll() {
 
 function decodeState(status, message) {
   let kycState = KYC_STATE['FAILED'];
+  console.log('KYC message: ', message);
   if (status == 'SUCCESS') {
     kycState = KYC_STATE['COMPLETED'];
     // All cases afterwards presume 'FAILURE' status code

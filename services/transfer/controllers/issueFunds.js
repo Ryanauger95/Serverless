@@ -39,6 +39,8 @@ var wallet_1 = require("../lib/models/wallet");
 var txn_1 = require("../lib/models/txn");
 var ledger_1 = require("../lib/models/ledger");
 var bankController = require("../lib/controllers/sila.js");
+// For each transaction that is not funded,
+// if the payer is lacking funds
 function issueFunds() {
     return __awaiter(this, void 0, void 0, function () {
         var txns, i, txn, _a, totalFailed, totalPending, totalComplete, fundAmount, issueResult, reference, err_1;
@@ -49,7 +51,7 @@ function issueFunds() {
                     return [4 /*yield*/, fetchNotFundedTransactions()];
                 case 1:
                     txns = _b.sent();
-                    console.log("Txn Res: ", txns);
+                    console.log("Un-Funded Transactions: ", txns);
                     i = 0;
                     _b.label = 2;
                 case 2:
@@ -59,8 +61,7 @@ function issueFunds() {
                 case 3:
                     _a = _b.sent(), totalFailed = _a.totalFailed, totalPending = _a.totalPending, totalComplete = _a.totalComplete;
                     console.log("Failed = " + totalFailed + ", \t Pending = " + totalPending + ", \t Completed = " + totalComplete);
-                    if (!(totalFailed > 0)) return [3 /*break*/, 4];
-                    throw Error("Failed!");
+                    return [3 /*break*/, 10];
                 case 4:
                     if (!(totalPending + totalComplete > txn.amount)) return [3 /*break*/, 5];
                     throw Error("Overfunded!");
@@ -127,7 +128,8 @@ function fetchNotFundedTransactions() {
         .where({
         "txn.fund_state": txn_1.FUND_STATE["NOT_FUNDED"],
         "payer_wallet.active": true,
-        "payer_wallet.kyc_state": wallet_1.KYC_STATE["COMPLETED"]
+        "payer_wallet.kyc_state": wallet_1.KYC_STATE["COMPLETED"],
+        "payer_wallet.bank_linked": true
     });
 }
 // Return the total amount of month transacted in the
