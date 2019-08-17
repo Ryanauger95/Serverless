@@ -171,4 +171,3 @@ function markFunded(txnId) {
         .findById(txnId)
         .patch({ fund_state: txn_1.FUND_STATE["FUNDED"] });
 }
-//# sourceMappingURL=issueFunds.js.map

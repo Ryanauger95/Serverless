@@ -12,57 +12,6 @@ import { SilaWallet, KYC_STATE } from "../lib/models/wallet";
  ****************************************/
 
 /****************************************
- * updateLedger
- * Does a full ledger update for all active
- * wallets
- ****************************************/
-async function syncLedger() {
-  console.log("Checking all pending transfers and updating their states...");
-
-  const activeWallets = await SilaWallet.query()
-    .select("*")
-    .where({ active: true });
-  console.log(`${activeWallets.length} active wallets`);
-
-  for (var i: number = 0; i < activeWallets.length; i++) {
-    const wallet: any = activeWallets[i];
-    getTransactions(wallet.handle).then(({ transactions }) => {
-      for (var j: number = 0; j < transactions.length; j++) {
-        const transaction = transactions[j];
-        console.log("Transaction: ", transaction);
-
-        // NOTE: we won't have txn_id. This means that
-        // in the case of an insert, we will know that
-        // an error occurred bc txn_id will be null
-        const {
-          toHandle,
-          fromHandle,
-          reference,
-          type,
-          amount,
-          state
-        } = transactionToLedgerEntry(transaction);
-
-        console.log(`New Ledger Entry -> \
-        type ${type}, state: ${state}, \
-        from: ${fromHandle} to: ${toHandle} \
-        amount: ${amount} reference: ${reference}`);
-
-        // Must update balance in this transaction
-        // NOTE: This is the only location in which the balance
-        // Will change
-
-        // .catch(err => {
-        //   if (err.code && !(err.code === "ER_DUP_ENTRY")) {
-        //     console.log("Error upserting: ", err);
-        //   }
-        // });
-      }
-    });
-  }
-}
-
-/****************************************
  * updateLedgerEntries
  * For each ledger entry that is PENDING,
  * check to see if the state has changed
@@ -231,4 +180,4 @@ function transactionToLedgerEntry(transaction: any): any {
   };
 }
 
-export { syncLedger, updateLedgerEntries };
+export { updateLedgerEntries };

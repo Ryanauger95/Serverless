@@ -1,8 +1,7 @@
 {
     "compilerOptions": {
-        "target": "es5",
-        "module": "commonjs",
-        "sourceMap": true,
-        "outDir": "./build"
-    }
+      "target": "es5",
+      "moduleResolution": "node",
+      "lib": ["es2015"]
+  }
 }

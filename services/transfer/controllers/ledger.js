@@ -37,57 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var ledger_1 = require("../lib/models/ledger");
 var sila_js_1 = require("../lib/controllers/sila.js");
-var wallet_1 = require("../lib/models/wallet");
 /****************************************
  * EXTERNAL FUNCTIONS
  ****************************************/
-/****************************************
- * updateLedger
- * Does a full ledger update for all active
- * wallets
- ****************************************/
-function syncLedger() {
-    return __awaiter(this, void 0, void 0, function () {
-        var activeWallets, i, wallet;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    console.log("Checking all pending transfers and updating their states...");
-                    return [4 /*yield*/, wallet_1.SilaWallet.query()
-                            .select("*")
-                            .where({ active: true })];
-                case 1:
-                    activeWallets = _a.sent();
-                    console.log(activeWallets.length + " active wallets");
-                    for (i = 0; i < activeWallets.length; i++) {
-                        wallet = activeWallets[i];
-                        sila_js_1.getTransactions(wallet.handle).then(function (_a) {
-                            var transactions = _a.transactions;
-                            for (var j = 0; j < transactions.length; j++) {
-                                var transaction = transactions[j];
-                                console.log("Transaction: ", transaction);
-                                // NOTE: we won't have txn_id. This means that
-                                // in the case of an insert, we will know that
-                                // an error occurred bc txn_id will be null
-                                var _b = transactionToLedgerEntry(transaction), toHandle = _b.toHandle, fromHandle = _b.fromHandle, reference = _b.reference, type = _b.type, amount = _b.amount, state = _b.state;
-                                console.log("New Ledger Entry ->         type " + type + ", state: " + state + ",         from: " + fromHandle + " to: " + toHandle + "         amount: " + amount + " reference: " + reference);
-                                // Must update balance in this transaction
-                                // NOTE: This is the only location in which the balance
-                                // Will change
-                                // .catch(err => {
-                                //   if (err.code && !(err.code === "ER_DUP_ENTRY")) {
-                                //     console.log("Error upserting: ", err);
-                                //   }
-                                // });
-                            }
-                        });
-                    }
-                    return [2 /*return*/];
-            }
-        });
-    });
-}
-exports.syncLedger = syncLedger;
 /****************************************
  * updateLedgerEntries
  * For each ledger entry that is PENDING,
@@ -256,4 +208,3 @@ function transactionToLedgerEntry(transaction) {
         state: state
     };
 }
-//# sourceMappingURL=ledger.js.map

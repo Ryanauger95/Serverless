@@ -1,11 +1,11 @@
 {
   "pathParameters": { "user_id": "66" },
   "body": {
-    "address_1": "4517 Country Ln",
+    "address_1": "131 Center Park Ln",
     "address_2": "",
-    "city": "Charlotte",
-    "state": "NC",
-    "zip": 28270,
+    "city": "Athens",
+    "state": "GA",
+    "zip": 30605,
     "ssn": 123452222
   }
 }

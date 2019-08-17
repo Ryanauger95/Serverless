@@ -18,5 +18,9 @@
     "request-promise": "^4.2.4",
     "sila-sdk": "^0.2.2",
     "twilio": "^3.33.3"
+  },
+  "devDependencies": {
+    "serverless-plugin-typescript": "^1.1.9",
+    "typescript": "^3.5.3"
   }
 }

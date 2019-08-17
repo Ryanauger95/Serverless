@@ -1,5 +1,5 @@
-const sila = require("../handlers/sila");
-const { SilaWallet, KYC_STATE } = require("../models/wallet");
+import * as sila from "../handlers/sila";
+import { SilaWallet, KYC_STATE } from "../models/wallet";
 
 async function register(id, info) {
   // Generate handle
@@ -33,7 +33,7 @@ async function register(id, info) {
   // TODO: Should we move this functionality into wallet.js...?
   // No. The table is separate, and we will have
   // separate tables for different providers
-  await new SilaWallet().insert(
+  await SilaWallet.insert(
     {
       address: wallet.address,
       handle: handle,
@@ -70,14 +70,14 @@ function issueSila(amount, handle, privateKey) {
 }
 
 async function getTransactions(handle) {
-  const wallet = await SilaWallet.query().findOne({
+  const wallet = (await SilaWallet.query().findOne({
     handle: handle,
     active: 1
-  });
+  })) as any;
   return sila.getTransactions(handle, wallet.private_key);
 }
 
-module.exports = {
+export {
   register,
   requestKYC,
   checkKYC,
@@ -86,7 +86,3 @@ module.exports = {
   issueSila,
   getTransactions
 };
-// module.exports.registerUser = registerUser;
-// module.exports.getSilaWallet.g = getWallet;
-// module.exports.linkAccount = linkAccount;
-// module.exports.getAccounts = getAccounts;

@@ -38,7 +38,7 @@ class SilaWallet extends Model {
     };
   }
 
-  insert(data, check) {
+  static insert(data, check) {
     return knex.transaction(async trx => {
       // Must double check to make sure that we
       // there are no other entries marked as active
@@ -59,24 +59,24 @@ class SilaWallet extends Model {
   static getWallet(userId) {
     return SilaWallet.query()
       .select("*")
-      .where({ active: 1, app_users_id: userId });
+      .where({ active: true, app_users_id: userId });
   }
 
   static getActiveWallets(userId) {
     return knex(silaTableName)
       .select("*")
-      .where({ app_users_id: userId, active: 1 });
+      .where({ active: true, app_users_id: userId });
   }
   static getWallets(userId) {
     return knex(silaTableName)
       .select("*")
-      .where({ app_users_id: userId });
+      .where({ active: true, app_users_id: userId });
   }
 
   static getKYCPending() {
     return knex(silaTableName)
       .select("*")
-      .where({ active: 1, kyc_state: KYC_STATE["PENDING"] });
+      .where({ active: true, kyc_state: KYC_STATE["PENDING"] });
   }
 }
 
