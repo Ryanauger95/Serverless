@@ -40,75 +40,62 @@ var txn_1 = require("../lib/models/txn");
 var ledger_1 = require("../lib/models/ledger");
 var bankController = require("../lib/controllers/sila.js");
 // For each transaction that is not funded,
-// if the payer is lacking funds
+// if the payer DOES NOT have enough money,
+// then issue funds into their account
 function issueFunds() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, i, txn, _a, totalFailed, totalPending, totalComplete, fundAmount, issueResult, reference, err_1;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var txns, _loop_1, i, state_1, err_1;
+        var _this = this;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    _b.trys.push([0, 12, , 13]);
+                    _a.trys.push([0, 2, , 3]);
                     return [4 /*yield*/, fetchNotFundedTransactions()];
                 case 1:
-                    txns = _b.sent();
+                    txns = _a.sent();
                     console.log("Un-Funded Transactions: ", txns);
-                    i = 0;
-                    _b.label = 2;
-                case 2:
-                    if (!(i < txns.length)) return [3 /*break*/, 11];
-                    txn = txns[i];
-                    return [4 /*yield*/, checkLedger(txn.id)];
-                case 3:
-                    _a = _b.sent(), totalFailed = _a.totalFailed, totalPending = _a.totalPending, totalComplete = _a.totalComplete;
-                    console.log("Failed = " + totalFailed + ", \t Pending = " + totalPending + ", \t Completed = " + totalComplete);
-                    return [3 /*break*/, 10];
-                case 4:
-                    if (!(totalPending + totalComplete > txn.amount)) return [3 /*break*/, 5];
-                    throw Error("Overfunded!");
-                case 5:
-                    if (!(totalPending + totalComplete === txn.amount)) return [3 /*break*/, 6];
-                    throw Error("Transaction is funded, should not get here");
-                case 6:
-                    if (!(totalPending + totalComplete < txn.amount)) return [3 /*break*/, 10];
-                    console.log("Issuing $ into the user's account");
-                    fundAmount = txn.amount - totalPending - totalComplete;
-                    console.log("Issuing " + fundAmount + " into user's wallet");
-                    return [4 /*yield*/, bankController.issueSila(fundAmount, txn.payer_handle, txn.payer_private_key)];
-                case 7:
-                    issueResult = _b.sent();
-                    console.log("IssueSila Result ", issueResult);
-                    if (issueResult.status != "SUCCESS") {
-                        throw Error("Issue money failed");
+                    _loop_1 = function () {
+                        var txn = txns[i];
+                        var effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
+                        // If the user has enough in their account, we
+                        // do NOT fund the account
+                        if (effectiveBalance > txn.amount) {
+                            console.log("User has enough funds in the account(" + txn.payer_active_balance + ")/pending(" + txn.payer_pending_balance + ") to cover the amount(" + txn.amount + ")");
+                            return { value: void 0 };
+                        }
+                        // Else, fund the payer
+                        var fundsRequired = txn.amount - effectiveBalance;
+                        bankController
+                            .issueSila(fundsRequired, txn.payer_handle)
+                            .then(function (res) { return __awaiter(_this, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        console.log("Issue Sila Result: ", res);
+                                        // Store in ledger
+                                        return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalance(txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired, ledger_1.LEDGER_STATE.PENDING, txn.id).catch(function (err) {
+                                                console.log("Transaction not added! Catastrophic error!");
+                                            })];
+                                    case 1:
+                                        // Store in ledger
+                                        _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); });
+                    };
+                    // If active balance + pending balance < amount, issue funds
+                    for (i = 0; i < txns.length; i++) {
+                        state_1 = _loop_1();
+                        if (typeof state_1 === "object")
+                            return [2 /*return*/, state_1.value];
                     }
-                    reference = issueResult.reference;
-                    console.log("Saving ledger entry into the user's account");
-                    // 2) Enter the value into the ledger
-                    return [4 /*yield*/, ledger_1.Ledger.query().insert({
-                            from_handle: ledger_1.SILA_HANDLE,
-                            to_handle: txn.payer_handle,
-                            amount: fundAmount,
-                            state: ledger_1.LEDGER_STATE["PENDING"],
-                            reference: reference,
-                            txn_id: txn.id
-                        })];
-                case 8:
-                    // 2) Enter the value into the ledger
-                    _b.sent();
-                    // Mark Txn as funded
-                    return [4 /*yield*/, markFunded(txn.id)];
-                case 9:
-                    // Mark Txn as funded
-                    _b.sent();
-                    _b.label = 10;
-                case 10:
-                    i++;
-                    return [3 /*break*/, 2];
-                case 11: return [3 /*break*/, 13];
-                case 12:
-                    err_1 = _b.sent();
+                    return [3 /*break*/, 3];
+                case 2:
+                    err_1 = _a.sent();
                     console.log("Error: ", err_1);
-                    return [3 /*break*/, 13];
-                case 13: return [2 /*return*/];
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
             }
         });
     });
@@ -122,7 +109,8 @@ function fetchNotFundedTransactions() {
         .select([
         "txn.*",
         "payer_wallet.handle as payer_handle",
-        "payer_wallet.private_key as payer_private_key"
+        "payer_wallet.active_balance as payer_active_balance",
+        "payer_wallet.pending_balance as payer_pending_balance"
     ])
         .join("sila_wallet as payer_wallet", "txn.payer_id", "payer_wallet.app_users_id")
         .where({

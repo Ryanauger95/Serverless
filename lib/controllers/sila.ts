@@ -65,8 +65,12 @@ function getAccounts(handle, privateKey) {
   return sila.getAccounts(handle, privateKey);
 }
 
-function issueSila(amount, handle, privateKey) {
-  return sila.issueSila(amount * 100, handle, privateKey);
+async function issueSila(amount, handle) {
+  const wallet = (await SilaWallet.query().findOne({
+    handle: handle,
+    active: true
+  })) as any;
+  return sila.issueSila(amount * 100, handle, wallet.private_key);
 }
 
 async function getTransactions(handle) {

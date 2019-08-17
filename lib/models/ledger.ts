@@ -30,18 +30,25 @@ class Ledger extends Model {
   // wallets' pending and active balances
   // NOTE: All ledger updates must run through this function
   // so that balance updates are properly made
-  static insertLedgerAndUpdateBalance(ledgerInsert) {
-    const {
-      toHandle,
-      fromHandle,
-      reference,
-      type,
-      amount,
-      state
-    } = ledgerInsert;
-
+  static insertLedgerAndUpdateBalance(
+    toHandle,
+    fromHandle,
+    reference,
+    type,
+    amount,
+    state,
+    txnId
+  ) {
     return transaction(knex, async trx => {
-      await Ledger.query().insert(ledgerInsert);
+      await Ledger.query(trx).insert({
+        to_handle: toHandle,
+        from_handle: fromHandle,
+        reference: reference,
+        type: type,
+        amount: amount,
+        state: state,
+        txn_id: txnId
+      } as any);
 
       // If the state is failed, and it doesnt already exits,
       // then we don't have to worry about users' balances
@@ -62,9 +69,10 @@ class Ledger extends Model {
             state === LEDGER_STATE.COMPLETED
               ? "active_balance"
               : "pending_balance";
-          const patchJSON = {
-            balanceType: this.raw(balanceType + " + " + String(amount))
-          };
+          const patchJSON = {};
+          patchJSON[balanceType] = this.raw(
+            balanceType + " + " + String(amount)
+          );
           await SilaWallet.query(trx)
             .patch(patchJSON as any)
             .where({
@@ -81,9 +89,10 @@ class Ledger extends Model {
             state === LEDGER_STATE.COMPLETED
               ? "active_balance"
               : "pending_balance";
-          const patchJSON = {
-            balanceType: this.raw(balanceType + " - " + String(amount))
-          };
+          const patchJSON = {};
+          patchJSON[balanceType] = this.raw(
+            balanceType + " - " + String(amount)
+          );
           await SilaWallet.query(trx)
             .patch(patchJSON as any)
             .where({
@@ -105,9 +114,10 @@ class Ledger extends Model {
             state === LEDGER_STATE.COMPLETED
               ? "active_balance"
               : "pending_balance";
-          const patchToHandleJSON = {
-            balanceType: this.raw(balanceType + " + " + String(amount))
-          };
+          const patchToHandleJSON = {};
+          patchToHandleJSON[balanceType] = this.raw(
+            balanceType + " + " + String(amount)
+          );
 
           await SilaWallet.query(trx)
             .patch(patchToHandleJSON as any)
@@ -120,9 +130,10 @@ class Ledger extends Model {
             state === LEDGER_STATE.COMPLETED
               ? "active_balance"
               : "pending_balance";
-          const patchFromHandleJSON = {
-            balanceType: this.raw(balanceType + " - " + String(amount))
-          };
+          const patchFromHandleJSON = {};
+          patchFromHandleJSON[balanceType] = this.raw(
+            balanceType + " - " + String(amount)
+          );
 
           await SilaWallet.query(trx)
             .patch(patchFromHandleJSON as any)

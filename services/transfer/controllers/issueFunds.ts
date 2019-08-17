@@ -1,10 +1,16 @@
 import { SilaWallet, KYC_STATE } from "../lib/models/wallet";
 import { Txn, FUND_STATE } from "../lib/models/txn";
-import { Ledger, LEDGER_STATE, SILA_HANDLE } from "../lib/models/ledger";
+import {
+  Ledger,
+  LEDGER_STATE,
+  SILA_HANDLE,
+  LEDGER_TYPE
+} from "../lib/models/ledger";
 import * as bankController from "../lib/controllers/sila.js";
 
 // For each transaction that is not funded,
-// if the payer is lacking funds
+// if the payer DOES NOT have enough money,
+// then issue funds into their account
 async function issueFunds() {
   try {
     // Select all transactions in which
@@ -14,66 +20,44 @@ async function issueFunds() {
     const txns = await fetchNotFundedTransactions();
     console.log("Un-Funded Transactions: ", txns);
 
-    // For each Transaction
-    // 1) Check the ledger for amount canceled, pending, and complete
-    //  a) if any transfers failed, mark error
-    //  b) if we overfunded, throw an error
-    //  c) if we are underfunded, fund for the correct amount
-    //  d) if we are funded correctly, mark as FUNDED
+    // If active balance + pending balance < amount, issue funds
     for (var i = 0; i < txns.length; i++) {
       const txn: any = txns[i];
+      const effectiveBalance =
+        txn.payer_active_balance + txn.payer_pending_balance;
 
-      // 1)
-      var { totalFailed, totalPending, totalComplete } = await checkLedger(
-        txn.id
-      );
-      console.log(
-        `Failed = ${totalFailed}, \t Pending = ${totalPending}, \t Completed = ${totalComplete}`
-      );
-      continue;
-      // a)
-      if (totalFailed > 0) {
-        throw Error("Failed!");
-      }
-      // b)
-      else if (totalPending + totalComplete > txn.amount) {
-        throw Error("Overfunded!");
-      }
-      // c)
-      else if (totalPending + totalComplete === txn.amount) {
-        throw Error("Transaction is funded, should not get here");
-      }
-      // d)
-      else if (totalPending + totalComplete < txn.amount) {
-        console.log("Issuing $ into the user's account");
-        // Issue sila from the payer into their account
-        // 1) Issue sila for user
-        const fundAmount: number = txn.amount - totalPending - totalComplete;
-        console.log(`Issuing ${fundAmount} into user's wallet`);
-        const issueResult = await bankController.issueSila(
-          fundAmount,
-          txn.payer_handle,
-          txn.payer_private_key
+      // If the user has enough in their account, we
+      // do NOT fund the account
+      if (effectiveBalance > txn.amount) {
+        console.log(
+          `User has enough funds in the account(${
+            txn.payer_active_balance
+          })/pending(${txn.payer_pending_balance}) to cover the amount(${
+            txn.amount
+          })`
         );
-        console.log("IssueSila Result ", issueResult);
-        if (issueResult.status != "SUCCESS") {
-          throw Error("Issue money failed");
-        }
-        const reference = issueResult.reference;
-        console.log("Saving ledger entry into the user's account");
-
-        // 2) Enter the value into the ledger
-        await Ledger.query().insert({
-          from_handle: SILA_HANDLE,
-          to_handle: txn.payer_handle,
-          amount: fundAmount,
-          state: LEDGER_STATE["PENDING"],
-          reference: reference,
-          txn_id: txn.id
-        } as any);
-        // Mark Txn as funded
-        await markFunded(txn.id);
+        return;
       }
+
+      // Else, fund the payer
+      const fundsRequired = txn.amount - effectiveBalance;
+      bankController
+        .issueSila(fundsRequired, txn.payer_handle)
+        .then(async res => {
+          console.log("Issue Sila Result: ", res);
+          // Store in ledger
+          await Ledger.insertLedgerAndUpdateBalance(
+            txn.payer_handle,
+            SILA_HANDLE,
+            res.reference,
+            LEDGER_TYPE.ISSUE,
+            fundsRequired,
+            LEDGER_STATE.PENDING,
+            txn.id
+          ).catch(err => {
+            console.log("Transaction not added! Catastrophic error!");
+          });
+        });
     }
   } catch (err) {
     console.log("Error: ", err);
@@ -88,7 +72,8 @@ function fetchNotFundedTransactions() {
     .select([
       "txn.*",
       "payer_wallet.handle as payer_handle",
-      "payer_wallet.private_key as payer_private_key"
+      "payer_wallet.active_balance as payer_active_balance",
+      "payer_wallet.pending_balance as payer_pending_balance"
     ])
     .join(
       "sila_wallet as payer_wallet",
