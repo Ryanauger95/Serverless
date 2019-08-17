@@ -49,7 +49,7 @@ function test() {
                     amount = 10;
                     state = ledger_1.LEDGER_STATE.PENDING;
                     txnId = 58;
-                    return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalance(toHandle, fromHandle, reference, type, amount, state, txnId)];
+                    return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalanceTrx(toHandle, fromHandle, reference, type, amount, state, txnId)];
                 case 1:
                     res = _a.sent();
                     console.log("Insert: ", res);

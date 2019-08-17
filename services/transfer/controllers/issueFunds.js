@@ -59,7 +59,7 @@ function issueFunds() {
                         var effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
                         // If the user has enough in their account, we
                         // do NOT fund the account
-                        if (effectiveBalance > txn.amount) {
+                        if (effectiveBalance >= txn.amount) {
                             console.log("User has enough funds in the account(" + txn.payer_active_balance + ")/pending(" + txn.payer_pending_balance + ") to cover the amount(" + txn.amount + ")");
                             return { value: void 0 };
                         }
@@ -68,18 +68,36 @@ function issueFunds() {
                         bankController
                             .issueSila(fundsRequired, txn.payer_handle)
                             .then(function (res) { return __awaiter(_this, void 0, void 0, function () {
+                            var trx, err_2;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
                                         console.log("Issue Sila Result: ", res);
-                                        // Store in ledger
-                                        return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalance(txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired, ledger_1.LEDGER_STATE.PENDING, txn.id).catch(function (err) {
-                                                console.log("Transaction not added! Catastrophic error!");
-                                            })];
+                                        _a.label = 1;
                                     case 1:
-                                        // Store in ledger
+                                        _a.trys.push([1, 5, , 6]);
+                                        return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
+                                    case 2:
+                                        trx = _a.sent();
+                                        return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalance(trx, txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired, ledger_1.LEDGER_STATE.PENDING, txn.id)];
+                                    case 3:
                                         _a.sent();
-                                        return [2 /*return*/];
+                                        return [4 /*yield*/, txn_1.Txn.query(trx)
+                                                .findById(txn.id)
+                                                .patch({
+                                                fund_state: txn_1.FUND_STATE.ISSUE_PENDING
+                                            })];
+                                    case 4:
+                                        _a.sent();
+                                        trx.commit();
+                                        return [3 /*break*/, 6];
+                                    case 5:
+                                        err_2 = _a.sent();
+                                        trx.rollback();
+                                        console.log("ISSUE,PAYER:" + txn.payer_handle + ",REFERENCE:" + res.reference + ",FUNDS:" + fundsRequired + ",TXN:" + txn.id);
+                                        console.log("Catastrophic Error: ", err_2);
+                                        return [3 /*break*/, 6];
+                                    case 6: return [2 /*return*/];
                                 }
                             });
                         }); });

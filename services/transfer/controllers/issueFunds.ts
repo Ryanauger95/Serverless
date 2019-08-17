@@ -28,7 +28,7 @@ async function issueFunds() {
 
       // If the user has enough in their account, we
       // do NOT fund the account
-      if (effectiveBalance > txn.amount) {
+      if (effectiveBalance >= txn.amount) {
         console.log(
           `User has enough funds in the account(${
             txn.payer_active_balance
@@ -46,17 +46,34 @@ async function issueFunds() {
         .then(async res => {
           console.log("Issue Sila Result: ", res);
           // Store in ledger
-          await Ledger.insertLedgerAndUpdateBalance(
-            txn.payer_handle,
-            SILA_HANDLE,
-            res.reference,
-            LEDGER_TYPE.ISSUE,
-            fundsRequired,
-            LEDGER_STATE.PENDING,
-            txn.id
-          ).catch(err => {
-            console.log("Transaction not added! Catastrophic error!");
-          });
+          var trx;
+          try {
+            trx = await Ledger.transaction.start(Ledger.knex());
+            await Ledger.insertLedgerAndUpdateBalance(
+              trx,
+              txn.payer_handle,
+              SILA_HANDLE,
+              res.reference,
+              LEDGER_TYPE.ISSUE,
+              fundsRequired,
+              LEDGER_STATE.PENDING,
+              txn.id
+            );
+            await Txn.query(trx)
+              .findById(txn.id)
+              .patch({
+                fund_state: FUND_STATE.ISSUE_PENDING
+              } as any);
+            trx.commit();
+          } catch (err) {
+            trx.rollback();
+            console.log(
+              `ISSUE,PAYER:${txn.payer_handle},REFERENCE:${
+                res.reference
+              },FUNDS:${fundsRequired},TXN:${txn.id}`
+            );
+            console.log("Catastrophic Error: ", err);
+          }
         });
     }
   } catch (err) {

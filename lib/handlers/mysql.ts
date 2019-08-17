@@ -17,6 +17,12 @@ const knex = Knex({
 
 Model.knex(knex);
 
+class BaseModel extends Model {
+  static get transaction() {
+    return transaction;
+  }
+}
+
 export { knex };
-export { Model };
+export { Model, BaseModel };
 export { transaction };

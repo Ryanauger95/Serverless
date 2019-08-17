@@ -12,7 +12,8 @@ enum DEAL_STATE {
 }
 enum FUND_STATE {
   NOT_FUNDED = 0,
-  FUNDED = 1
+  ISSUE_PENDING = 1,
+  FUNDED = 2
 }
 const DEAL_ROLE = {
   SENDER: 0,
@@ -50,6 +51,11 @@ class Txn extends Model {
   }
   static markFunded() {
     console.log("Funded");
+  }
+  static markFundsIssued(txnId) {
+    return this.query()
+      .findById(txnId)
+      .patch({ fund_state: FUND_STATE.ISSUE_PENDING } as any);
   }
 }
 

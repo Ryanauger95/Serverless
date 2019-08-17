@@ -1,4 +1,4 @@
-import { Model, transaction, knex } from "../handlers/mysql";
+import { BaseModel, transaction, knex } from "../handlers/mysql";
 import { SilaWallet } from "../models/wallet";
 import { stat } from "fs";
 
@@ -18,7 +18,7 @@ enum LEDGER_TYPE {
 
 const SILA_HANDLE = "SILA_ISSUED";
 
-class Ledger extends Model {
+class Ledger extends BaseModel {
   // The insert function simply requires that
   // we first insure that no other entry
   // has app_users_id & active = 1
@@ -30,7 +30,7 @@ class Ledger extends Model {
   // wallets' pending and active balances
   // NOTE: All ledger updates must run through this function
   // so that balance updates are properly made
-  static insertLedgerAndUpdateBalance(
+  static async insertLedgerAndUpdateBalanceTrx(
     toHandle,
     fromHandle,
     reference,
@@ -39,111 +39,134 @@ class Ledger extends Model {
     state,
     txnId
   ) {
-    return transaction(knex, async trx => {
-      await Ledger.query(trx).insert({
-        to_handle: toHandle,
-        from_handle: fromHandle,
-        reference: reference,
-        type: type,
-        amount: amount,
-        state: state,
-        txn_id: txnId
-      } as any);
+    var trx;
+    try {
+      trx = await Ledger.transaction.start(Ledger.knex());
+      await this.insertLedgerAndUpdateBalance(
+        trx,
+        toHandle,
+        fromHandle,
+        reference,
+        type,
+        amount,
+        state,
+        txnId
+      );
+      trx.commit();
+    } catch (err) {
+      trx.rollback();
+      throw Error("Error adding!");
+    }
+  }
+  static async insertLedgerAndUpdateBalance(
+    trx,
+    toHandle,
+    fromHandle,
+    reference,
+    type,
+    amount,
+    state,
+    txnId
+  ) {
+    await Ledger.query(trx).insert({
+      to_handle: toHandle,
+      from_handle: fromHandle,
+      reference: reference,
+      type: type,
+      amount: amount,
+      state: state,
+      txn_id: txnId
+    } as any);
 
-      // If the state is failed, and it doesnt already exits,
-      // then we don't have to worry about users' balances
-      if (state === LEDGER_STATE.FAILED) {
-        return;
+    // If the state is failed, and it doesnt already exits,
+    // then we don't have to worry about users' balances
+    if (state === LEDGER_STATE.FAILED) {
+      return;
+    }
+
+    // Update the users' balances
+    // NOTE: If completed, we do not have to modify pending
+    //  because the transaction does not already exist as pending
+    // and the reference # is unique
+    switch (type) {
+      // Takes ACH transfer, converts to sila token
+      // Completed: (+ active)
+      // Pending: (+ pending)
+      case LEDGER_TYPE.ISSUE: {
+        var balanceType: string =
+          state === LEDGER_STATE.COMPLETED
+            ? "active_balance"
+            : "pending_balance";
+        const patchJSON = {};
+        patchJSON[balanceType] = this.raw(balanceType + " + " + String(amount));
+        await SilaWallet.query(trx)
+          .patch(patchJSON as any)
+          .where({
+            handle: toHandle
+          });
+        break;
       }
 
-      // Update the users' balances
-      // NOTE: If completed, we do not have to modify pending
-      //  because the transaction does not already exist as pending
-      // and the reference # is unique
-      switch (type) {
-        // Takes ACH transfer, converts to sila token
-        // Completed: (+ active)
-        // Pending: (+ pending)
-        case LEDGER_TYPE.ISSUE: {
-          var balanceType: string =
-            state === LEDGER_STATE.COMPLETED
-              ? "active_balance"
-              : "pending_balance";
-          const patchJSON = {};
-          patchJSON[balanceType] = this.raw(
-            balanceType + " + " + String(amount)
-          );
-          await SilaWallet.query(trx)
-            .patch(patchJSON as any)
-            .where({
-              handle: toHandle
-            });
-          break;
-        }
-
-        // Transfers sila token back to SILA in exchange for $
-        // Completed: (- active)
-        // Pending: (- pending)
-        case LEDGER_TYPE.REDEEM: {
-          var balanceType: string =
-            state === LEDGER_STATE.COMPLETED
-              ? "active_balance"
-              : "pending_balance";
-          const patchJSON = {};
-          patchJSON[balanceType] = this.raw(
-            balanceType + " - " + String(amount)
-          );
-          await SilaWallet.query(trx)
-            .patch(patchJSON as any)
-            .where({
-              handle: fromHandle
-            });
-          break;
-        }
-
-        // Transfer from one SILA Address to Another
-        // toHandle:
-        //   Completed: (+ active)
-        //   Pending: (+ pending)
-        // fromHandle:
-        //   Completed: (-active)
-        //   Pending: (- pending))
-        case LEDGER_TYPE.TRANSFER: {
-          // Update the ToHandle Wallet
-          var balanceType: string =
-            state === LEDGER_STATE.COMPLETED
-              ? "active_balance"
-              : "pending_balance";
-          const patchToHandleJSON = {};
-          patchToHandleJSON[balanceType] = this.raw(
-            balanceType + " + " + String(amount)
-          );
-
-          await SilaWallet.query(trx)
-            .patch(patchToHandleJSON as any)
-            .where({
-              handle: toHandle
-            });
-
-          // Update the FromHandle Wallet
-          var balanceType: string =
-            state === LEDGER_STATE.COMPLETED
-              ? "active_balance"
-              : "pending_balance";
-          const patchFromHandleJSON = {};
-          patchFromHandleJSON[balanceType] = this.raw(
-            balanceType + " - " + String(amount)
-          );
-
-          await SilaWallet.query(trx)
-            .patch(patchFromHandleJSON as any)
-            .where({
-              handle: fromHandle
-            });
-          break;
-        }
+      // Transfers sila token back to SILA in exchange for $
+      // Completed: (- active)
+      // Pending: (- pending)
+      case LEDGER_TYPE.REDEEM: {
+        var balanceType: string =
+          state === LEDGER_STATE.COMPLETED
+            ? "active_balance"
+            : "pending_balance";
+        const patchJSON = {};
+        patchJSON[balanceType] = this.raw(balanceType + " - " + String(amount));
+        await SilaWallet.query(trx)
+          .patch(patchJSON as any)
+          .where({
+            handle: fromHandle
+          });
+        break;
       }
-    });
+
+      // Transfer from one SILA Address to Another
+      // toHandle:
+      //   Completed: (+ active)
+      //   Pending: (+ pending)
+      // fromHandle:
+      //   Completed: (-active)
+      //   Pending: (- pending))
+      case LEDGER_TYPE.TRANSFER: {
+        // Update the ToHandle Wallet
+        var balanceType: string =
+          state === LEDGER_STATE.COMPLETED
+            ? "active_balance"
+            : "pending_balance";
+        const patchToHandleJSON = {};
+        patchToHandleJSON[balanceType] = this.raw(
+          balanceType + " + " + String(amount)
+        );
+
+        await SilaWallet.query(trx)
+          .patch(patchToHandleJSON as any)
+          .where({
+            handle: toHandle
+          });
+
+        // Update the FromHandle Wallet
+        var balanceType: string =
+          state === LEDGER_STATE.COMPLETED
+            ? "active_balance"
+            : "pending_balance";
+        const patchFromHandleJSON = {};
+        patchFromHandleJSON[balanceType] = this.raw(
+          balanceType + " - " + String(amount)
+        );
+
+        await SilaWallet.query(trx)
+          .patch(patchFromHandleJSON as any)
+          .where({
+            handle: fromHandle
+          });
+        break;
+      }
+    }
   }
 
   // ACID transaction for updating the ledger.
