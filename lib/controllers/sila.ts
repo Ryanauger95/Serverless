@@ -1,4 +1,4 @@
-import * as sila from "../handlers/sila";
+import { sila, fboHandle } from "../handlers/sila";
 import { SilaWallet, KYC_STATE } from "../models/wallet";
 
 async function register(id, info) {
@@ -80,6 +80,36 @@ async function getTransactions(handle) {
   })) as any;
   return sila.getTransactions(handle, wallet.private_key);
 }
+async function transferToFbo(fromHandle, amount) {
+  return transferSila(fromHandle, fboHandle, amount);
+}
+async function transferSila(fromHandle, toHandle, amount) {
+  const fromWallet = (await SilaWallet.query().findOne({
+    handle: fromHandle,
+    active: true
+  })) as any;
+  const toWallet = (await SilaWallet.query().findOne({
+    handle: toHandle,
+    active: true
+  })) as any;
+
+  if (fromWallet.active_balance < amount) {
+    throw Error("Active balance too low!");
+  }
+  if (toWallet === undefined) {
+    throw Error("toWallet DNE!");
+  }
+  return sila.transferSila(
+    amount,
+    fromHandle,
+    fromWallet.private_key,
+    toHandle
+  );
+}
+
+function fboHandle() {
+  return sila.fboHandle;
+}
 
 export {
   register,
@@ -88,5 +118,8 @@ export {
   linkAccount,
   getAccounts,
   issueSila,
-  getTransactions
+  getTransactions,
+  transferSila,
+  transferToFbo,
+  fboHandle
 };

@@ -19,10 +19,6 @@ provider:
     AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN: ${env:AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN}
 
 functions:
-  transfer-issue_funds_all:
-    handler: controllers/issueFunds.issueFunds
-    events:
-      - schedule: rate(15 minutes)
   transfer-ledger-update_entries:
     handler: controllers/ledger.updateLedgerEntries
     events:
@@ -31,3 +27,11 @@ functions:
     handler: controllers/ledger.syncLedger
     events:
       - schedule: rate(10 days)
+  transfer-issue_funds_all:
+    handler: controllers/issueFunds.issueFunds
+    events:
+      - schedule: rate(15 minutes)
+  transfer-fund_transaction:
+    handler: controllers/transfer.fundTransaction
+    events:
+      - schedule: rate(15 minutes)

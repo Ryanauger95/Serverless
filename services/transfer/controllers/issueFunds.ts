@@ -49,7 +49,7 @@ async function issueFunds() {
           var trx;
           try {
             trx = await Ledger.transaction.start(Ledger.knex());
-            await Ledger.insertLedgerAndUpdateBalance(
+            await Ledger.insertLedgerAndUpdateBalanceTrx(
               trx,
               txn.payer_handle,
               SILA_HANDLE,

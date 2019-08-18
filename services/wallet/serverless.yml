@@ -1,6 +1,9 @@
 service: wallet
 frameworkVersion: ">=1.1.0 <2.0.0"
 
+package:
+  exclude:
+    - lib/node_modules/**
 
 provider:
   name: aws

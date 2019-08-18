@@ -8,7 +8,7 @@ async function test() {
   const amount = 10;
   const state = LEDGER_STATE.PENDING;
   const txnId = 58;
-  const res = await Ledger.insertLedgerAndUpdateBalanceTrx(
+  const res = await Ledger.insertLedgerAndUpdateBalance(
     toHandle,
     fromHandle,
     reference,

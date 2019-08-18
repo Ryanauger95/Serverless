@@ -60,8 +60,13 @@ async function updateLedgerEntries() {
           const updatedLedgerEntry = transactionToLedgerEntry(transaction);
           const ledgerId = pendingLedgerEntry.id;
           const res = await Ledger.updateLedgerAndBalance(
-            ledgerId,
-            updatedLedgerEntry
+            pendingLedgerEntry.id,
+            pendingLedgerEntry.to_handle,
+            pendingLedgerEntry.from_handle,
+            transaction.reference_id,
+            pendingLedgerEntry.type,
+            pendingLedgerEntry.amount,
+            newLedgerState
           ).catch(err => {
             console.log("Error: ", err);
           });

@@ -13,7 +13,8 @@ enum DEAL_STATE {
 enum FUND_STATE {
   NOT_FUNDED = 0,
   ISSUE_PENDING = 1,
-  FUNDED = 2
+  TRANSFER_PENDING = 2,
+  FUNDED = 3
 }
 const DEAL_ROLE = {
   SENDER: 0,
