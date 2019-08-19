@@ -1,6 +1,6 @@
 import { Ledger, LEDGER_TYPE, LEDGER_STATE } from "../lib/models/ledger";
 
-async function test() {
+async function testInsert() {
   const toHandle = "ryan.test4.silamoney.eth";
   const fromHandle = "SILA_ISSUED";
   const reference = "a90b039d-4130-459d-b428-dd72546c2344";
@@ -20,4 +20,6 @@ async function test() {
   console.log("Insert: ", res);
 }
 
-test();
+async function testTransfer() {}
+
+testTransfer();

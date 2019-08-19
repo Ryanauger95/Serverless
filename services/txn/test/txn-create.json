@@ -1,11 +1,11 @@
 {
    "body": {
-	"amount": 50,
-	"reserve": 10,
+	"amount": 5,
+	"reserve": 1,
 	"description": "Test",
 	"holding_period": 13,
 	"payer": 65,
-	"collector": 61,
-	"originator": 61
+	"collector": 66,
+	"originator": 66
 	}
 }

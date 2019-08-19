@@ -12,8 +12,9 @@ enum LEDGER_STATE {
 enum LEDGER_TYPE {
   UNKNOWN = -1,
   ISSUE = 0,
-  TRANSFER = 1,
-  REDEEM = 2
+  TRANSFER_TO_FBO = 1,
+  TRANSFER_FROM_FBO = 2,
+  REDEEM = 3
 }
 
 const SILA_HANDLE = "SILA_ISSUED";
@@ -132,7 +133,8 @@ class Ledger extends BaseModel {
       // fromHandle:
       //   Completed: (-active)
       //   Pending: (- pending))
-      case LEDGER_TYPE.TRANSFER: {
+      case LEDGER_TYPE.TRANSFER_TO_FBO:
+      case LEDGER_TYPE.TRANSFER_FROM_FBO: {
         // Update the ToHandle Wallet
         var balanceType: string =
           state === LEDGER_STATE.COMPLETED
@@ -229,14 +231,13 @@ class Ledger extends BaseModel {
     // State Change validated.
     // Update the ledger
     await this.updateEntryState(
+      trx,
       id,
       toHandle,
       fromHandle,
       reference,
       type,
-      amount,
-      state,
-      trx
+      state
     );
 
     // Update the users' balances
@@ -288,7 +289,8 @@ class Ledger extends BaseModel {
       // fromHandle:
       //   Completed: (-active, +pending)
       //   Failed: (+ pending)
-      case LEDGER_TYPE.TRANSFER: {
+      case LEDGER_TYPE.TRANSFER_TO_FBO:
+      case LEDGER_TYPE.TRANSFER_FROM_FBO: {
         // Update the ToHandle Wallet
         const patchToHandleJSON = {
           pending_balance: this.raw("pending_balance -" + String(amount))
@@ -328,18 +330,20 @@ class Ledger extends BaseModel {
   // This will fail if the entry DNE already
   // NOTE: This query ensures that all fields match except for
   // the state
-  static updateEntryState(
+  static async updateEntryState(
+    trx,
     id,
     toHandle,
     fromHandle,
     reference,
     type,
-    amount,
-    state,
-    trx
+    state
   ) {
     // Update a ledger entry.
-    return Ledger.query(trx)
+    console.log(
+      `UPDATE:id=${id},reference=${reference},type=${type},state=${state},toHandle=${toHandle},fromHandle=${fromHandle}`
+    );
+    const res = await Ledger.query(trx)
       .update({
         state: state
       } as any)
@@ -348,10 +352,12 @@ class Ledger extends BaseModel {
         reference: reference,
         type: type,
         from_handle: fromHandle,
-        to_handle: toHandle,
-        amount: amount
+        to_handle: toHandle
       })
       .andWhere("state", "!=", state);
+    if (res === 0) {
+      throw Error("update failed!");
+    }
   }
 }
 

@@ -1,10 +1,15 @@
 # For full config options, check the docs:
 #    docs.serverless.com
 
+
 service: txn
 frameworkVersion: ">=1.1.0 <2.0.0"
 app: rest-api-txn
 org: ryanauger
+
+package:
+  exclude:
+    - lib/node_modules/**
 
 provider:
   name: aws
@@ -12,10 +17,10 @@ provider:
   stage: dev
   region: us-east-1
   environment:
-    AWS_MYSQL_HOST: esgrodb.cmuwidwxnyfk.us-east-1.rds.amazonaws.com
-    AWS_MYSQL_USERNAME: esgro
-    AWS_MYSQL_DBNAME: esgro_db_dev
-    AWS_MYSQL_PASSWORD: vEcwAibpBgG5zrRtphtJ
+    AWS_MYSQL_HOST: ${env:AWS_MYSQL_HOST}
+    AWS_MYSQL_USERNAME: ${env:AWS_MYSQL_USERNAME}
+    AWS_MYSQL_DBNAME: ${env:AWS_MYSQL_DBNAME}
+    AWS_MYSQL_PASSWORD: ${env:AWS_MYSQL_PASSWORD}
 
 functions:
   txn-create:

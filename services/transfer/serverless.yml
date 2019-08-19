@@ -1,6 +1,10 @@
 service: transfer
 frameworkVersion: ">=1.1.0 <2.0.0"
 
+package:
+  exclude:
+    - lib/node_modules/**
+
 provider:
   name: aws
   runtime: nodejs10.x
@@ -22,16 +26,20 @@ functions:
   transfer-ledger-update_entries:
     handler: controllers/ledger.updateLedgerEntries
     events:
-      - schedule: rate(15 minutes)
-  transfer-ledger-sync:
-    handler: controllers/ledger.syncLedger
+      - schedule: rate(2 minutes)
+  transfer-issue_funds:
+    handler: controllers/issue.issueFunds
     events:
-      - schedule: rate(10 days)
-  transfer-issue_funds_all:
-    handler: controllers/issueFunds.issueFunds
+      - schedule: rate(2 minutes)
+  transfer-issue_update:
+    handler: controllers/issue.checkIssued
     events:
-      - schedule: rate(15 minutes)
-  transfer-fund_transaction:
-    handler: controllers/transfer.fundTransaction
+      - schedule: rate(2 minutes)
+  transfer-fbo_transfer:
+    handler: controllers/transferFbo.fundFbo
     events:
-      - schedule: rate(15 minutes)
+      - schedule: rate(2 minutes)
+  transfer-fbo_update:
+    handler: controllers/transferFbo.checkFundFbo
+    events:
+      - schedule: rate(2 minutes)

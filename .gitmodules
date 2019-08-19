@@ -1,0 +1,3 @@
+[submodule "awslambda-npm-install"]
+	path = awslambda-npm-install
+	url = https://github.com/iopipe/awslambda-npm-install.git

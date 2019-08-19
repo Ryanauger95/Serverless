@@ -1,4 +1,4 @@
-const model = require('../lib/models/txn');
+const {Txn} = require('../lib/models/txn');
 const Joi = require('joi');
 const {parseAndValidate}= require('../lib/handlers/bodyParser');
 
@@ -22,7 +22,7 @@ async function create(event) {
     const body = parseAndValidate(event.body, schema);
 
     // Save TXN
-    const txnId = await model.save(
+    const txnId = await Txn.saveNew(
         body.amount, body.reserve,
         body.description, body.payer,
         body.collector, body.originator,

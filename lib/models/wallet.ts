@@ -10,9 +10,9 @@ const KYC_STATE = {
   COMPLETED: 2
 };
 
-const OWNER_TYPE = {
+const ACCOUNT_TYPE = {
   USER: 0,
-  ESGRO: 1
+  FBO: 1
 };
 
 const silaTableName: string = "sila_wallet";
@@ -80,4 +80,4 @@ class SilaWallet extends Model {
   }
 }
 
-export { SilaWallet, KYC_STATE };
+export { SilaWallet, KYC_STATE, ACCOUNT_TYPE };

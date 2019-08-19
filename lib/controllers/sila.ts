@@ -80,18 +80,22 @@ async function getTransactions(handle) {
   })) as any;
   return sila.getTransactions(handle, wallet.private_key);
 }
+
+///
 async function transferToFbo(fromHandle, amount) {
   return transferSila(fromHandle, fboHandle, amount);
 }
 async function transferSila(fromHandle, toHandle, amount) {
-  const fromWallet = (await SilaWallet.query().findOne({
-    handle: fromHandle,
-    active: true
-  })) as any;
-  const toWallet = (await SilaWallet.query().findOne({
-    handle: toHandle,
-    active: true
-  })) as any;
+  console.log("Fromwallet: ", fromHandle);
+  const fromWallet = (await SilaWallet.query()
+    .findOne({ handle: fromHandle, active: true })
+    .select(["private_key", "active_balance"])) as any;
+
+  console.log("Wallet: ", fromWallet);
+  console.log("Towallet: ", toHandle);
+  const toWallet = (await SilaWallet.query()
+    .findOne({ handle: toHandle, active: true })
+    .select("handle")) as any;
 
   if (fromWallet.active_balance < amount) {
     throw Error("Active balance too low!");
@@ -100,15 +104,11 @@ async function transferSila(fromHandle, toHandle, amount) {
     throw Error("toWallet DNE!");
   }
   return sila.transferSila(
-    amount,
+    amount * 100,
     fromHandle,
     fromWallet.private_key,
     toHandle
   );
-}
-
-function fboHandle() {
-  return sila.fboHandle;
 }
 
 export {

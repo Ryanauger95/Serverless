@@ -1,5 +1,7 @@
-import { Model, knex } from "../handlers/mysql";
+import { BaseModel, knex } from "../handlers/mysql";
 import { SilaWallet } from "./wallet";
+import { LEDGER_STATE } from "./ledger";
+import { transaction } from "objection";
 
 enum DEAL_STATE {
   DISPUTE = -3,
@@ -13,15 +15,18 @@ enum DEAL_STATE {
 enum FUND_STATE {
   NOT_FUNDED = 0,
   ISSUE_PENDING = 1,
-  TRANSFER_PENDING = 2,
-  FUNDED = 3
+  ISSUE_COMPLETE = 2,
+  TO_FBO_TRANSFER_PENDING = 3,
+  TO_FBO_TRANSFER_COMPLETE = 4,
+  FROM_FBO_TRANSFER_PENDING = 5,
+  FROM_FBO_TRANSFER_COMPLETE = 6
 }
 const DEAL_ROLE = {
   SENDER: 0,
   RECEIVER: 1
 };
 
-class Txn extends Model {
+class Txn extends BaseModel {
   static get tableName() {
     return "txn";
   }
@@ -29,7 +34,7 @@ class Txn extends Model {
     const { User } = require("./user");
     return {
       payer: {
-        relation: Model.BelongsToOneRelation,
+        relation: BaseModel.BelongsToOneRelation,
         modelClass: User,
         join: {
           from: "txn.payer_id",
@@ -37,7 +42,7 @@ class Txn extends Model {
         }
       },
       wallet: {
-        relation: Model.ManyToManyRelation,
+        relation: BaseModel.ManyToManyRelation,
         modelClass: SilaWallet,
         join: {
           from: "txn.payer_id",
@@ -50,13 +55,39 @@ class Txn extends Model {
       }
     };
   }
-  static markFunded() {
-    console.log("Funded");
+  static saveNew(
+    amount,
+    reserve,
+    description,
+    payer,
+    collector,
+    originator,
+    period
+  ) {
+    return knex.transaction(async trx => {
+      const [txnId] = await trx("txn").insert({
+        amount: amount,
+        reserve: reserve,
+        description: description,
+        payer_id: payer,
+        collector_id: collector,
+        originator_id: originator
+      });
+      console.log("Txn_id: ", txnId);
+
+      const [fee_id] = await fee(trx, amount, txnId);
+      console.log("fee id: ", fee_id);
+
+      const [holding_id] = await holdingPeriod(trx, period, txnId);
+      console.log("holding id: ", holding_id.insertId);
+
+      return txnId;
+    });
   }
-  static markFundsIssued(txnId) {
-    return this.query()
+  static updateFundState(txnId: number, newState: FUND_STATE, trx?: any) {
+    return Txn.query(trx)
       .findById(txnId)
-      .patch({ fund_state: FUND_STATE.ISSUE_PENDING } as any);
+      .update({ fund_state: newState } as any);
   }
 }
 
@@ -66,49 +97,18 @@ function retreive(txnId) {
     .where({ id: txnId });
 }
 
-function save(
-  amount,
-  reserve,
-  description,
-  payer,
-  collector,
-  originator,
-  period
-) {
-  return knex.transaction(async trx => {
-    const [fee_id] = await fee(trx, amount);
-    console.log("fee id: ", fee_id);
+function fee(driver: any, amount: string, txnId: number) {
+  return driver("fee_schedule").insert({ total_fee: amount, txn_id: txnId });
+}
 
-    const [holding_id] = await holdingPeriod(trx, period);
-    console.log("holding id: ", holding_id.insertId);
-
-    const [txn] = await trx("txn").insert({
-      amount: amount,
-      reserve: reserve,
-      description: description,
-      payer_id: payer,
-      collector_id: collector,
-      originator_id: originator,
-      fee_id: fee_id,
-      holding_period_id: holding_id.insertId
-    });
-    console.log("Txn_id: ", txn);
-    return txn;
+function holdingPeriod(trx, period, txnId) {
+  const date = new Date();
+  const dueDate = date.setDate(date.getDate() + period);
+  return trx("holding_period").insert({
+    period: period,
+    due_date: dueDate,
+    txn_id: txnId
   });
 }
 
-function fee(driver: any, amount: string) {
-  return driver("fee_schedule").insert({ total_fee: amount });
-}
-
-function holdingPeriod(driver, period) {
-  const due_date = (Date.now() / 1000 + 60 * 60 * 24 * period) | 0;
-  console.log("Due date: ", due_date);
-  return driver.raw(
-    "INSERT INTO holding_period (period, due_date) \
-    VALUES (:period, FROM_UNIXTIME(:due_date))",
-    { period: period, due_date: due_date }
-  );
-}
-
-export { Txn, FUND_STATE, DEAL_ROLE, DEAL_STATE, save, retreive };
+export { Txn, FUND_STATE, DEAL_ROLE, DEAL_STATE, retreive };
