@@ -48,8 +48,7 @@ var sila_js_1 = require("../lib/controllers/sila.js");
  ****************************************/
 function updateLedgerEntries() {
     return __awaiter(this, void 0, void 0, function () {
-        var ledgerPending, _loop_1, handle, i;
-        var _this = this;
+        var ledgerPending, i, pendingLedgerEntry, handle, transactions, transaction, newLedgerState, oldLedgerState;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -62,50 +61,36 @@ function updateLedgerEntries() {
                 case 1:
                     ledgerPending = _a.sent();
                     console.log("pending ledger entries", ledgerPending);
-                    _loop_1 = function () {
-                        var pendingLedgerEntry = ledgerPending[i];
-                        // Get all transactions associated with the ledger entry
-                        // Then, update the state if it changed
-                        // If there is an error, then it is a big error
-                        handle = handleForType(pendingLedgerEntry);
-                        sila_js_1.getTransactions(handle)
-                            .then(function (_a) {
-                            var transactions = _a.transactions;
-                            return __awaiter(_this, void 0, void 0, function () {
-                                var transaction, newLedgerState, oldLedgerState;
-                                return __generator(this, function (_b) {
-                                    switch (_b.label) {
-                                        case 0:
-                                            transaction = findTransaction(pendingLedgerEntry.reference, transactions);
-                                            if (!transaction) {
-                                                console.log("MASSIVE Error... Transaction not found!");
-                                                return [2 /*return*/];
-                                            }
-                                            console.log("Transaction Matched: ", transaction);
-                                            newLedgerState = transactionStateToLedgerState(transaction);
-                                            oldLedgerState = pendingLedgerEntry.state;
-                                            console.log("oldLedgerState(" + oldLedgerState + ") newLedgerState(" + newLedgerState + ")");
-                                            if (!(newLedgerState != oldLedgerState)) return [3 /*break*/, 2];
-                                            console.log("Updating state");
-                                            return [4 /*yield*/, ledger_1.Ledger.updateLedgerAndBalance(pendingLedgerEntry.id, pendingLedgerEntry.to_handle, pendingLedgerEntry.from_handle, transaction.reference_id, pendingLedgerEntry.type, pendingLedgerEntry.amount, newLedgerState).catch(function (err) {
-                                                    console.log("Error: ", err);
-                                                })];
-                                        case 1:
-                                            _b.sent();
-                                            _b.label = 2;
-                                        case 2: return [2 /*return*/];
-                                    }
-                                });
-                            });
-                        })
-                            .catch(function (err) {
-                            console.log("Error retreiving transactions for handle: ", handle, " Error: ", err);
-                        });
-                    };
-                    for (i = 0; i < ledgerPending.length; i++) {
-                        _loop_1();
+                    i = 0;
+                    _a.label = 2;
+                case 2:
+                    if (!(i < ledgerPending.length)) return [3 /*break*/, 6];
+                    pendingLedgerEntry = ledgerPending[i];
+                    handle = handleForType(pendingLedgerEntry);
+                    return [4 /*yield*/, sila_js_1.getTransactions(handle)];
+                case 3:
+                    transactions = (_a.sent()).transactions;
+                    transaction = findTransaction(pendingLedgerEntry.reference, transactions);
+                    if (!transaction) {
+                        console.log("MASSIVE Error... Transaction not found!");
+                        return [2 /*return*/];
                     }
-                    return [2 /*return*/];
+                    console.log("Transaction Matched: ", transaction);
+                    newLedgerState = transactionStateToLedgerState(transaction);
+                    oldLedgerState = pendingLedgerEntry.state;
+                    console.log("oldLedgerState(" + oldLedgerState + ") newLedgerState(" + newLedgerState + ")");
+                    if (!(newLedgerState != oldLedgerState)) return [3 /*break*/, 5];
+                    console.log("Updating state");
+                    return [4 /*yield*/, ledger_1.Ledger.updateLedgerAndBalance(pendingLedgerEntry.id, pendingLedgerEntry.to_handle, pendingLedgerEntry.from_handle, transaction.reference_id, pendingLedgerEntry.type, pendingLedgerEntry.amount, newLedgerState).catch(function (err) {
+                            console.log("Error: ", err);
+                        })];
+                case 4:
+                    _a.sent();
+                    _a.label = 5;
+                case 5:
+                    i++;
+                    return [3 /*break*/, 2];
+                case 6: return [2 /*return*/];
             }
         });
     });

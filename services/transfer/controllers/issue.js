@@ -44,96 +44,73 @@ var common_1 = require("./common");
 // then issue funds into their account
 function issueFunds() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, _loop_1, i, err_1;
-        var _this = this;
+        var txns, i, txn, effectiveBalance, fundsRequired, res, trx, err_1, err_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 6, , 7]);
+                    _a.trys.push([0, 15, , 16]);
                     return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.NOT_FUNDED)];
                 case 1:
                     txns = _a.sent();
                     console.log("#Txns: " + txns.length);
-                    _loop_1 = function () {
-                        var txn, effectiveBalance, fundsRequired_1;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    txn = txns[i];
-                                    effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
-                                    if (!(txn.payer_active_balance >= txn.amount)) return [3 /*break*/, 2];
-                                    console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_COMPLETE");
-                                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_COMPLETE)];
-                                case 1:
-                                    _a.sent();
-                                    return [3 /*break*/, 5];
-                                case 2:
-                                    if (!(effectiveBalance >= txn.amount)) return [3 /*break*/, 4];
-                                    console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_PENDING");
-                                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING)];
-                                case 3:
-                                    _a.sent();
-                                    return [3 /*break*/, 5];
-                                case 4:
-                                    fundsRequired_1 = txn.amount - effectiveBalance;
-                                    console.log("TXN(" + txn.id + ") issuing " + fundsRequired_1);
-                                    bankController
-                                        .issueSila(fundsRequired_1, txn.payer_handle)
-                                        .then(function (res) { return __awaiter(_this, void 0, void 0, function () {
-                                        var trx, err_2;
-                                        return __generator(this, function (_a) {
-                                            switch (_a.label) {
-                                                case 0:
-                                                    console.log("Issue Sila Result: ", res);
-                                                    _a.label = 1;
-                                                case 1:
-                                                    _a.trys.push([1, 5, , 6]);
-                                                    return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
-                                                case 2:
-                                                    trx = _a.sent();
-                                                    return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalanceTrx(trx, txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired_1, ledger_1.LEDGER_STATE.PENDING, txn.id)];
-                                                case 3:
-                                                    _a.sent();
-                                                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING, trx)];
-                                                case 4:
-                                                    _a.sent();
-                                                    trx.commit();
-                                                    return [3 /*break*/, 6];
-                                                case 5:
-                                                    err_2 = _a.sent();
-                                                    trx.rollback();
-                                                    console.log("ISSUE,PAYER:" + txn.payer_handle + ",REFERENCE:" + res.reference + ",FUNDS:" + fundsRequired_1 + ",TXN:" + txn.id);
-                                                    console.log("Catastrophic Error: ", err_2);
-                                                    return [3 /*break*/, 6];
-                                                case 6: return [2 /*return*/];
-                                            }
-                                        });
-                                    }); })
-                                        .catch(function (err) {
-                                        console.log("Error issuing funds: ", err);
-                                    });
-                                    _a.label = 5;
-                                case 5: return [2 /*return*/];
-                            }
-                        });
-                    };
                     i = 0;
                     _a.label = 2;
                 case 2:
-                    if (!(i < txns.length)) return [3 /*break*/, 5];
-                    return [5 /*yield**/, _loop_1()];
+                    if (!(i < txns.length)) return [3 /*break*/, 14];
+                    txn = txns[i];
+                    effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
+                    if (!(txn.payer_active_balance >= txn.amount)) return [3 /*break*/, 4];
+                    console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_COMPLETE");
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_COMPLETE)];
                 case 3:
                     _a.sent();
-                    _a.label = 4;
+                    return [3 /*break*/, 13];
                 case 4:
+                    if (!(effectiveBalance >= txn.amount)) return [3 /*break*/, 6];
+                    console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_PENDING");
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING)];
+                case 5:
+                    _a.sent();
+                    return [3 /*break*/, 13];
+                case 6:
+                    fundsRequired = txn.amount - effectiveBalance;
+                    console.log("TXN(" + txn.id + ") issuing " + fundsRequired);
+                    return [4 /*yield*/, bankController.issueSila(fundsRequired, txn.payer_handle)];
+                case 7:
+                    res = _a.sent();
+                    console.log("Issue Sila Result: ", res);
+                    if (res.status != "SUCCESS") {
+                        throw Error(res);
+                    }
+                    _a.label = 8;
+                case 8:
+                    _a.trys.push([8, 12, , 13]);
+                    return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
+                case 9:
+                    trx = _a.sent();
+                    return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalanceTrx(trx, txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired, ledger_1.LEDGER_STATE.PENDING, txn.id)];
+                case 10:
+                    _a.sent();
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING, trx)];
+                case 11:
+                    _a.sent();
+                    trx.commit();
+                    return [3 /*break*/, 13];
+                case 12:
+                    err_1 = _a.sent();
+                    trx.rollback();
+                    console.log("ISSUE,PAYER:" + txn.payer_handle + ",REFERENCE:" + res.reference + ",FUNDS:" + fundsRequired + ",TXN:" + txn.id);
+                    console.log("Catastrophic Error: ", err_1);
+                    return [3 /*break*/, 13];
+                case 13:
                     i++;
                     return [3 /*break*/, 2];
-                case 5: return [3 /*break*/, 7];
-                case 6:
-                    err_1 = _a.sent();
-                    console.log("Error: ", err_1);
-                    return [3 /*break*/, 7];
-                case 7: return [2 /*return*/];
+                case 14: return [3 /*break*/, 16];
+                case 15:
+                    err_2 = _a.sent();
+                    console.log("Error: ", err_2);
+                    return [3 /*break*/, 16];
+                case 16: return [2 /*return*/];
             }
         });
     });

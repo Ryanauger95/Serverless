@@ -70,13 +70,14 @@ async function issueSila(amount, handle) {
     handle: handle,
     active: true
   })) as any;
+  console.log("Issuing sila");
   return sila.issueSila(amount * 100, handle, wallet.private_key);
 }
 
 async function getTransactions(handle) {
   const wallet = (await SilaWallet.query().findOne({
     handle: handle,
-    active: 1
+    active: true
   })) as any;
   return sila.getTransactions(handle, wallet.private_key);
 }
