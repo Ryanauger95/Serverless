@@ -30,6 +30,14 @@ class Txn extends BaseModel {
   static get tableName() {
     return "txn";
   }
+  // total is amount + fee + arb fee
+  static get virtualAttributes() {
+    return ["total"];
+  }
+  total() {
+    const txn: any = this;
+    return txn.amount + txn.start_fee;
+  }
   static get relationMappings() {
     const { User } = require("./user");
     return {

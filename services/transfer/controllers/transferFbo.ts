@@ -1,4 +1,4 @@
-import { Txn, FUND_STATE } from "../lib/models/txn";
+import { Txn, FUND_STATE, DEAL_ROLE, DEAL_STATE } from "../lib/models/txn";
 import { KYC_STATE } from "../lib/models/wallet";
 import {
   Ledger,
@@ -12,7 +12,10 @@ import { fetchTransactions } from "./common";
 
 async function fundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
-  const txns: any = await fetchTransactions(FUND_STATE.ISSUE_COMPLETE);
+  const txns: any = await fetchTransactions(
+    FUND_STATE.ISSUE_COMPLETE,
+    DEAL_STATE.PROGRESS
+  );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
     const txn = txns[i];
@@ -90,7 +93,10 @@ async function fundFbo() {
 
 async function checkFundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
-  const txns: any = await fetchTransactions(FUND_STATE.TO_FBO_TRANSFER_PENDING);
+  const txns: any = await fetchTransactions(
+    FUND_STATE.TO_FBO_TRANSFER_PENDING,
+    DEAL_STATE.PROGRESS
+  );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
     const txn = txns[i];

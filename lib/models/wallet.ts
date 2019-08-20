@@ -12,7 +12,8 @@ const KYC_STATE = {
 
 const ACCOUNT_TYPE = {
   USER: 0,
-  FBO: 1
+  FBO: 1,
+  FEE: 2
 };
 
 const silaTableName: string = "sila_wallet";

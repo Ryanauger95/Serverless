@@ -7,6 +7,7 @@ import {
   LEDGER_TYPE
 } from "../lib/models/ledger";
 import * as bankController from "../lib/controllers/sila.js";
+import { totalTxn } from "../lib/controllers/ledger";
 import { fetchTransactions } from "./common";
 
 // For each transaction that is not funded,
@@ -14,28 +15,38 @@ import { fetchTransactions } from "./common";
 // then issue funds into their account
 async function issueFunds() {
   try {
-    const txns = await fetchTransactions(FUND_STATE.NOT_FUNDED);
+    const txns = await fetchTransactions(
+      FUND_STATE.NOT_FUNDED,
+      DEAL_STATE.PROGRESS
+    );
     console.log(`#Txns: ${txns.length}`);
 
     for (var i = 0; i < txns.length; i++) {
-      const txn: any = txns[i];
-      const effectiveBalance =
+      // const txn: any = txns[i];
+      const txn: any = txns[i].toJSON();
+      const payerEffectiveBalance =
         txn.payer_active_balance + txn.payer_pending_balance;
+
+      // Total the txn's balance information
+      const totals = await totalTxn(txn.id);
+      console.log("Totals: ", totals);
+      const fboEffectiveBalance = totals.fbo.completed + totals.fbo.pending;
+      const amountRemaining = txn.amount - fboEffectiveBalance;
+      const fundsRequired = amountRemaining - payerEffectiveBalance;
 
       // If the user has enough in their account, we
       // mark the txn as ISSUE_COMPLETE
-      if (txn.payer_active_balance >= txn.amount) {
+      if (txn.payer_active_balance >= amountRemaining) {
         console.log(`TXN(${txn.id}) NOT_FUNDED -> ISSUE_COMPLETE`);
         await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
       }
       // If the user will have enough in their account,
       // then mark as issue pending
-      else if (effectiveBalance >= txn.amount) {
+      else if (payerEffectiveBalance >= amountRemaining) {
         console.log(`TXN(${txn.id}) NOT_FUNDED -> ISSUE_PENDING`);
         await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_PENDING);
-      } else {
+      } else if (fundsRequired > 0) {
         // Else, fund the payer and mark ISSUE_PENDING
-        const fundsRequired = txn.amount - effectiveBalance;
         console.log(`TXN(${txn.id}) issuing ${fundsRequired}`);
         const res = await bankController.issueSila(
           fundsRequired,
@@ -85,11 +96,14 @@ async function issueFunds() {
 // is sufficient, move to ISSUE_COMPLETE
 async function checkIssued() {
   try {
-    const txns = await fetchTransactions(FUND_STATE.ISSUE_PENDING);
+    const txns = await fetchTransactions(
+      FUND_STATE.ISSUE_PENDING,
+      DEAL_STATE.PROGRESS
+    );
 
     for (var i = 0; i < txns.length; i++) {
       const txn: any = txns[i];
-      const effectiveBalance =
+      const payerEffectiveBalance =
         txn.payer_active_balance + txn.payer_pending_balance;
 
       // If the user has enough in their account, we
@@ -100,7 +114,7 @@ async function checkIssued() {
       }
       // If the user will have enough in their account,
       // then mark as issue pending
-      else if (effectiveBalance >= txn.amount) {
+      else if (payerEffectiveBalance >= txn.amount) {
         console.log(`TXN(${txn.id}) ISSUE_PENDING UNCHANGED`);
       }
       // Mark the txn as NOT_FUNDED
@@ -112,11 +126,6 @@ async function checkIssued() {
   } catch (err) {
     console.log("Error: ", err);
   }
-}
-
-// Select all NOT_FUNDED
-function fetchNotFundedTransactions() {
-  return fetchTransactions(FUND_STATE.NOT_FUNDED);
 }
 
 export { issueFunds, checkIssued };

@@ -38,79 +38,88 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var txn_1 = require("../lib/models/txn");
 var ledger_1 = require("../lib/models/ledger");
 var bankController = require("../lib/controllers/sila.js");
+var ledger_2 = require("../lib/controllers/ledger");
 var common_1 = require("./common");
 // For each transaction that is not funded,
 // if the payer DOES NOT have enough money,
 // then issue funds into their account
 function issueFunds() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, i, txn, effectiveBalance, fundsRequired, res, trx, err_1, err_2;
+        var txns, i, txn, payerEffectiveBalance, totals, fboEffectiveBalance, amountRemaining, fundsRequired, res, trx, err_1, err_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 15, , 16]);
-                    return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.NOT_FUNDED)];
+                    _a.trys.push([0, 16, , 17]);
+                    return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.NOT_FUNDED, txn_1.DEAL_STATE.PROGRESS)];
                 case 1:
                     txns = _a.sent();
                     console.log("#Txns: " + txns.length);
                     i = 0;
                     _a.label = 2;
                 case 2:
-                    if (!(i < txns.length)) return [3 /*break*/, 14];
+                    if (!(i < txns.length)) return [3 /*break*/, 15];
                     txn = txns[i];
-                    effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
-                    if (!(txn.payer_active_balance >= txn.amount)) return [3 /*break*/, 4];
+                    payerEffectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
+                    return [4 /*yield*/, ledger_2.totalTxn(txn.id)];
+                case 3:
+                    totals = _a.sent();
+                    console.log("Totals: ", totals);
+                    fboEffectiveBalance = totals.fbo.completed + totals.fbo.pending;
+                    amountRemaining = txn.amount - fboEffectiveBalance;
+                    fundsRequired = amountRemaining - payerEffectiveBalance;
+                    if (!(txn.payer_active_balance >= amountRemaining)) return [3 /*break*/, 5];
                     console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_COMPLETE");
                     return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_COMPLETE)];
-                case 3:
-                    _a.sent();
-                    return [3 /*break*/, 13];
                 case 4:
-                    if (!(effectiveBalance >= txn.amount)) return [3 /*break*/, 6];
+                    _a.sent();
+                    return [3 /*break*/, 14];
+                case 5:
+                    if (!(payerEffectiveBalance >= amountRemaining)) return [3 /*break*/, 7];
                     console.log("TXN(" + txn.id + ") NOT_FUNDED -> ISSUE_PENDING");
                     return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING)];
-                case 5:
-                    _a.sent();
-                    return [3 /*break*/, 13];
                 case 6:
-                    fundsRequired = txn.amount - effectiveBalance;
+                    _a.sent();
+                    return [3 /*break*/, 14];
+                case 7:
+                    if (!(fundsRequired > 0)) return [3 /*break*/, 14];
+                    // Else, fund the payer and mark ISSUE_PENDING
                     console.log("TXN(" + txn.id + ") issuing " + fundsRequired);
                     return [4 /*yield*/, bankController.issueSila(fundsRequired, txn.payer_handle)];
-                case 7:
+                case 8:
                     res = _a.sent();
                     console.log("Issue Sila Result: ", res);
                     if (res.status != "SUCCESS") {
                         throw Error(res);
                     }
-                    _a.label = 8;
-                case 8:
-                    _a.trys.push([8, 12, , 13]);
-                    return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
+                    _a.label = 9;
                 case 9:
+                    _a.trys.push([9, 13, , 14]);
+                    return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
+                case 10:
                     trx = _a.sent();
                     return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalanceTrx(trx, txn.payer_handle, ledger_1.SILA_HANDLE, res.reference, ledger_1.LEDGER_TYPE.ISSUE, fundsRequired, ledger_1.LEDGER_STATE.PENDING, txn.id)];
-                case 10:
-                    _a.sent();
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING, trx)];
                 case 11:
                     _a.sent();
-                    trx.commit();
-                    return [3 /*break*/, 13];
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_PENDING, trx)];
                 case 12:
+                    _a.sent();
+                    trx.commit();
+                    return [3 /*break*/, 14];
+                case 13:
                     err_1 = _a.sent();
                     trx.rollback();
                     console.log("ISSUE,PAYER:" + txn.payer_handle + ",REFERENCE:" + res.reference + ",FUNDS:" + fundsRequired + ",TXN:" + txn.id);
                     console.log("Catastrophic Error: ", err_1);
-                    return [3 /*break*/, 13];
-                case 13:
+                    return [3 /*break*/, 14];
+                case 14:
                     i++;
                     return [3 /*break*/, 2];
-                case 14: return [3 /*break*/, 16];
-                case 15:
+                case 15: return [3 /*break*/, 17];
+                case 16:
                     err_2 = _a.sent();
                     console.log("Error: ", err_2);
-                    return [3 /*break*/, 16];
-                case 16: return [2 /*return*/];
+                    return [3 /*break*/, 17];
+                case 17: return [2 /*return*/];
             }
         });
     });
@@ -121,12 +130,12 @@ exports.issueFunds = issueFunds;
 // is sufficient, move to ISSUE_COMPLETE
 function checkIssued() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, i, txn, effectiveBalance, err_3;
+        var txns, i, txn, payerEffectiveBalance, err_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 9, , 10]);
-                    return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.ISSUE_PENDING)];
+                    return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.ISSUE_PENDING, txn_1.DEAL_STATE.PROGRESS)];
                 case 1:
                     txns = _a.sent();
                     i = 0;
@@ -134,7 +143,7 @@ function checkIssued() {
                 case 2:
                     if (!(i < txns.length)) return [3 /*break*/, 8];
                     txn = txns[i];
-                    effectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
+                    payerEffectiveBalance = txn.payer_active_balance + txn.payer_pending_balance;
                     if (!(txn.payer_active_balance >= txn.amount)) return [3 /*break*/, 4];
                     console.log("TXN(" + txn.id + ") ISSUE_PENDING -> ISSUE_COMPLETE");
                     return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_COMPLETE)];
@@ -142,7 +151,7 @@ function checkIssued() {
                     _a.sent();
                     return [3 /*break*/, 7];
                 case 4:
-                    if (!(effectiveBalance >= txn.amount)) return [3 /*break*/, 5];
+                    if (!(payerEffectiveBalance >= txn.amount)) return [3 /*break*/, 5];
                     console.log("TXN(" + txn.id + ") ISSUE_PENDING UNCHANGED");
                     return [3 /*break*/, 7];
                 case 5:
@@ -165,7 +174,3 @@ function checkIssued() {
     });
 }
 exports.checkIssued = checkIssued;
-// Select all NOT_FUNDED
-function fetchNotFundedTransactions() {
-    return common_1.fetchTransactions(txn_1.FUND_STATE.NOT_FUNDED);
-}

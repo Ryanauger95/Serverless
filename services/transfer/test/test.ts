@@ -1,4 +1,5 @@
 import { Ledger, LEDGER_TYPE, LEDGER_STATE } from "../lib/models/ledger";
+import { Txn } from "../lib/models/txn";
 
 async function testInsert() {
   const toHandle = "ryan.test4.silamoney.eth";
@@ -20,6 +21,9 @@ async function testInsert() {
   console.log("Insert: ", res);
 }
 
-async function testTransfer() {}
+async function getTransaction() {
+  const txn = await Txn.query().findById(63);
+  console.log(txn.toJSON());
+}
 
-testTransfer();
+getTransaction();

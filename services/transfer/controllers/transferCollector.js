@@ -35,94 +35,86 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var txn_1 = require("../lib/models/txn");
-var ledger_1 = require("../lib/models/ledger");
-var bankController = require("../lib/controllers/sila");
-var ledger_2 = require("../lib/controllers/ledger");
 var common_1 = require("./common");
-function fundFbo() {
+var ledger_1 = require("../lib/controllers/ledger");
+var txn_1 = require("../lib/models/txn");
+var bankController = require("../lib/controllers/sila");
+var ledger_2 = require("../lib/models/ledger");
+function fundCollector() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, i, txn, totals, fboActiveBalance, fboPendingBalance, fboEffectiveBalance, amountRemaining, payerActiveBalance, fboHandle, res, trx, err_1;
+        var txns, i, txn, totals, collectorActiveBalance, collectorEffectiveBalance, amountRemaining, fboHandle, res, trx, err_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.ISSUE_COMPLETE, txn_1.DEAL_STATE.PROGRESS)];
+                case 0: return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.TO_FBO_TRANSFER_COMPLETE, txn_1.DEAL_STATE.FINISHED)];
                 case 1:
                     txns = _a.sent();
-                    console.log("#Txns: " + txns.length);
+                    console.log("#txns: ", txns.length);
                     i = 0;
                     _a.label = 2;
                 case 2:
-                    if (!(i < txns.length)) return [3 /*break*/, 16];
+                    if (!(i < txns.length)) return [3 /*break*/, 13];
                     txn = txns[i];
                     console.log("Txn: ", txn);
-                    return [4 /*yield*/, ledger_2.totalTxn(txn.id)];
+                    return [4 /*yield*/, ledger_1.totalTxn(txn.id)];
                 case 3:
                     totals = _a.sent();
                     console.log("Totals: ", totals);
-                    fboActiveBalance = totals.fbo.completed;
-                    fboPendingBalance = totals.fbo.pending;
-                    fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-                    amountRemaining = txn.amount - fboEffectiveBalance;
-                    payerActiveBalance = txn.payer_active_balance;
-                    // Find how much the txn needs
-                    console.log("TXN(" + txn.id + ") FBO requires $" + amountRemaining);
-                    if (!(amountRemaining === 0)) return [3 /*break*/, 5];
-                    console.log("TXN(" + txn.id + ") already funded!");
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.TO_FBO_TRANSFER_COMPLETE)];
+                    collectorActiveBalance = totals.collector.completed;
+                    collectorEffectiveBalance = collectorActiveBalance + totals.collector.pending;
+                    amountRemaining = txn.amount - collectorEffectiveBalance;
+                    if (amountRemaining < 0) {
+                        //throw an error here
+                        console.log("Error.. overfunded");
+                    }
+                    if (!(collectorActiveBalance >= txn.amount)) return [3 /*break*/, 4];
+                    // NOTE: We should throw an error here
+                    console.log("TXN(" + txn.id + ") TO_FBO_TRANSFER_COMPLETE -> FROM_FBO_TRANSFER_COMPLETE");
+                    txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.FROM_FBO_TRANSFER_COMPLETE);
+                    return [3 /*break*/, 12];
                 case 4:
-                    _a.sent();
-                    return [3 /*break*/, 15];
+                    if (!(amountRemaining === 0)) return [3 /*break*/, 5];
+                    console.log("TXN(" + txn.id + ") TO_FBO_TRANSFER_COMPLETE -> UNCHANGED");
+                    return [3 /*break*/, 12];
                 case 5:
-                    if (!(amountRemaining < 0)) return [3 /*break*/, 6];
-                    // Do something
-                    throw Error("Overfunded!");
-                case 6:
-                    if (!(amountRemaining > payerActiveBalance)) return [3 /*break*/, 8];
-                    console.log("TXN(" + txn.id + ") ISSUE_COMPLETE -> NOT_FUNDED");
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.NOT_FUNDED)];
-                case 7:
-                    _a.sent();
-                    return [3 /*break*/, 15];
-                case 8:
                     fboHandle = bankController.fboHandle;
-                    return [4 /*yield*/, bankController.transferSila(txn.payer_handle, fboHandle, amountRemaining)];
-                case 9:
+                    return [4 /*yield*/, bankController.transferSila(fboHandle, txn.collector_handle, amountRemaining)];
+                case 6:
                     res = _a.sent();
                     console.log("Transfer Sila Res: ", res);
-                    _a.label = 10;
-                case 10:
-                    _a.trys.push([10, 14, , 15]);
-                    return [4 /*yield*/, ledger_1.Ledger.transaction.start(ledger_1.Ledger.knex())];
-                case 11:
+                    _a.label = 7;
+                case 7:
+                    _a.trys.push([7, 11, , 12]);
+                    return [4 /*yield*/, ledger_2.Ledger.transaction.start(ledger_2.Ledger.knex())];
+                case 8:
                     trx = _a.sent();
-                    return [4 /*yield*/, ledger_1.Ledger.insertLedgerAndUpdateBalanceTrx(trx, fboHandle, txn.payer_handle, res.reference, ledger_1.LEDGER_TYPE.TRANSFER_TO_FBO, amountRemaining, ledger_1.LEDGER_STATE.PENDING, txn.id)];
-                case 12:
+                    return [4 /*yield*/, ledger_2.Ledger.insertLedgerAndUpdateBalanceTrx(trx, txn.collector_handle, fboHandle, res.reference, ledger_2.LEDGER_TYPE.TRANSFER_FROM_FBO, amountRemaining, ledger_2.LEDGER_STATE.PENDING, txn.id)];
+                case 9:
                     _a.sent();
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.TO_FBO_TRANSFER_PENDING, trx)];
-                case 13:
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.FROM_FBO_TRANSFER_PENDING, trx)];
+                case 10:
                     _a.sent();
                     trx.commit();
-                    return [3 /*break*/, 15];
-                case 14:
+                    return [3 /*break*/, 12];
+                case 11:
                     err_1 = _a.sent();
                     console.log("Catastrophic Error: ", err_1);
                     trx.rollback();
-                    return [3 /*break*/, 15];
-                case 15:
+                    return [3 /*break*/, 12];
+                case 12:
                     i++;
                     return [3 /*break*/, 2];
-                case 16: return [2 /*return*/];
+                case 13: return [2 /*return*/];
             }
         });
     });
 }
-exports.fundFbo = fundFbo;
-function checkFundFbo() {
+exports.fundCollector = fundCollector;
+function checkFundCollector() {
     return __awaiter(this, void 0, void 0, function () {
-        var txns, i, txn, totals, fboActiveBalance, fboPendingBalance, fboEffectiveBalance, amountRemaining, payerActiveBalance;
+        var txns, i, txn, totals, collectorActiveBalance, collectorPendingBalance, collectorEffectiveBalance;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.TO_FBO_TRANSFER_PENDING, txn_1.DEAL_STATE.PROGRESS)];
+                case 0: return [4 /*yield*/, common_1.fetchTransactions(txn_1.FUND_STATE.FROM_FBO_TRANSFER_PENDING, txn_1.DEAL_STATE.FINISHED)];
                 case 1:
                     txns = _a.sent();
                     console.log("#Txns: " + txns.length);
@@ -132,28 +124,26 @@ function checkFundFbo() {
                     if (!(i < txns.length)) return [3 /*break*/, 9];
                     txn = txns[i];
                     console.log("Txn: ", txn);
-                    return [4 /*yield*/, ledger_2.totalTxn(txn.id)];
+                    return [4 /*yield*/, ledger_1.totalTxn(txn.id)];
                 case 3:
                     totals = _a.sent();
                     console.log("Totals: ", totals);
-                    fboActiveBalance = totals.fbo.completed;
-                    fboPendingBalance = totals.fbo.pending;
-                    fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-                    amountRemaining = txn.amount - fboEffectiveBalance;
-                    payerActiveBalance = txn.payer_active_balance;
-                    if (!(fboActiveBalance >= txn.amount)) return [3 /*break*/, 5];
-                    console.log("TXN(" + txn.id + ") TO_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE");
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.TO_FBO_TRANSFER_COMPLETE)];
+                    collectorActiveBalance = totals.collector.completed;
+                    collectorPendingBalance = totals.collector.pending;
+                    collectorEffectiveBalance = collectorActiveBalance + collectorPendingBalance;
+                    if (!(collectorActiveBalance >= txn.amount)) return [3 /*break*/, 5];
+                    console.log("TXN(" + txn.id + ") FROM_FBO_TRANSFER_PENDING -> FROM_FBO_TRANSFER_COMPLETE");
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.FROM_FBO_TRANSFER_COMPLETE)];
                 case 4:
                     _a.sent();
                     return [3 /*break*/, 8];
                 case 5:
-                    if (!(fboEffectiveBalance >= txn.amount)) return [3 /*break*/, 6];
-                    console.log("TXN(" + txn.id + ") TO_FBO_TRANSFER_PENDING UNCHANGED");
+                    if (!(collectorEffectiveBalance >= txn.amount)) return [3 /*break*/, 6];
+                    console.log("TXN(" + txn.id + ") FROM_FBO_TRANSFER_PENDING UNCHANGED");
                     return [3 /*break*/, 8];
                 case 6:
-                    console.log("TXN(" + txn.id + ") TO_FBO_TRANSFER_PENDING -> ISSUE_COMPLETE");
-                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.ISSUE_COMPLETE)];
+                    console.log("TXN(" + txn.id + ") FROM_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE");
+                    return [4 /*yield*/, txn_1.Txn.updateFundState(txn.id, txn_1.FUND_STATE.TO_FBO_TRANSFER_COMPLETE)];
                 case 7:
                     _a.sent();
                     _a.label = 8;
@@ -165,4 +155,4 @@ function checkFundFbo() {
         });
     });
 }
-exports.checkFundFbo = checkFundFbo;
+exports.checkFundCollector = checkFundCollector;

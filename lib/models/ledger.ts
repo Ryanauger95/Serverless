@@ -345,7 +345,8 @@ class Ledger extends BaseModel {
     );
     const res = await Ledger.query(trx)
       .update({
-        state: state
+        state: state,
+        update_date: new Date()
       } as any)
       .where({
         id: id,

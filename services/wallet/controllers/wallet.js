@@ -92,8 +92,7 @@ function create(event) {
                             city: body.city,
                             state: body.state,
                             zip: String(body.zip),
-                            ssn: String(body.ssn),
-                            public_token: body.public_token
+                            ssn: String(body.ssn)
                         })];
                 case 4:
                     // Register with our banking provider

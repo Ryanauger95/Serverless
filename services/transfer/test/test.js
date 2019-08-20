@@ -36,6 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var ledger_1 = require("../lib/models/ledger");
+var txn_1 = require("../lib/models/txn");
 function testInsert() {
     return __awaiter(this, void 0, void 0, function () {
         var toHandle, fromHandle, reference, type, amount, state, txnId, res;
@@ -58,9 +59,18 @@ function testInsert() {
         });
     });
 }
-function testTransfer() {
-    return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-        return [2 /*return*/];
-    }); });
+function getTransaction() {
+    return __awaiter(this, void 0, void 0, function () {
+        var txn;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, txn_1.Txn.query().findById(63)];
+                case 1:
+                    txn = _a.sent();
+                    console.log(txn.toJSON());
+                    return [2 /*return*/];
+            }
+        });
+    });
 }
-testTransfer();
+getTransaction();
