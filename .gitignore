@@ -5,9 +5,8 @@ jspm_packages
 # Serverless directories
 .serverless
 
-## JS
-services/transfer/**/*.js*
-services/wallet/**/*.js*
+## JS & .JS.MAP
+**/*.js*
 
 # OSX
 .DS_Store

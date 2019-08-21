@@ -1,5 +1,6 @@
 import { Ledger, LEDGER_TYPE, LEDGER_STATE } from "../lib/models/ledger";
 import { Txn } from "../lib/models/txn";
+import { getTransactions } from "../lib/controllers/sila";
 
 async function testInsert() {
   const toHandle = "ryan.test4.silamoney.eth";
@@ -22,8 +23,10 @@ async function testInsert() {
 }
 
 async function getTransaction() {
-  const txn = await Txn.query().findById(63);
-  console.log(txn.toJSON());
+  // const txn = await Txn.query().findById(63);
+  // console.log(txn.toJSON());
+  const res = await getTransactions("ryan.test4.silamoney.eth");
+  console.log(res);
 }
 
 getTransaction();

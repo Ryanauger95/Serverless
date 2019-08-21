@@ -1,19 +1,19 @@
-const model = require('../lib/models/txn');
-const Joi = require('joi');
+const model = require("../lib/models/txn");
+const Joi = require("joi");
 
 async function retreive(event, context) {
   console.log(event);
-  let response = {statusCode: 400};
+  let response = { statusCode: 400, body: null };
   try {
-    const txnId = event['pathParameters']['txn_id'];
-    console.log('TXNID: ', txnId);
+    const txnId = event["pathParameters"]["txn_id"];
+    console.log("TXNID: ", txnId);
     const [sql] = await model.retreive(txnId);
     console.log(sql);
     response = {
       statusCode: 200,
       body: JSON.stringify({
-        result: sql,
-      }),
+        result: sql
+      })
     };
   } catch (err) {
     console.log(err);
@@ -21,4 +21,5 @@ async function retreive(event, context) {
   return response;
 }
 
+export { retreive };
 module.exports.retreive = retreive;

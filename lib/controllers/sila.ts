@@ -71,15 +71,15 @@ async function issueSila(amount, handle) {
     active: true
   })) as any;
   console.log("Issuing sila");
-  return sila.issueSila(amount * 100, handle, wallet.private_key);
+  return sila.issueSila(amount, handle, wallet.private_key);
 }
 
-async function getTransactions(handle) {
+async function getTransactions(handle: string, filters?: object) {
   const wallet = (await SilaWallet.query().findOne({
     handle: handle,
     active: true
   })) as any;
-  return sila.getTransactions(handle, wallet.private_key);
+  return sila.getTransactions(handle, wallet.private_key, filters);
 }
 
 ///
@@ -105,7 +105,7 @@ async function transferSila(fromHandle, toHandle, amount) {
     throw Error("toWallet DNE!");
   }
   return sila.transferSila(
-    amount * 100,
+    amount,
     fromHandle,
     fromWallet.private_key,
     toHandle

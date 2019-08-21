@@ -12,13 +12,13 @@ import { fetchTransactions } from "./common";
 
 async function fundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
-  const txns: any = await fetchTransactions(
+  const txns = await fetchTransactions(
     FUND_STATE.ISSUE_COMPLETE,
     DEAL_STATE.PROGRESS
   );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
-    const txn = txns[i];
+    const txn: any = txns[i].toJSON();
     console.log("Txn: ", txn);
 
     // Total the txn's balance information
@@ -27,7 +27,7 @@ async function fundFbo() {
     const fboActiveBalance = totals.fbo.completed;
     const fboPendingBalance = totals.fbo.pending;
     const fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-    const amountRemaining = txn.amount - fboEffectiveBalance;
+    const amountRemaining = txn.total - fboEffectiveBalance;
 
     // Total the payer's balance information
     const payerActiveBalance = txn.payer_active_balance;
@@ -93,13 +93,13 @@ async function fundFbo() {
 
 async function checkFundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
-  const txns: any = await fetchTransactions(
+  const txns = await fetchTransactions(
     FUND_STATE.TO_FBO_TRANSFER_PENDING,
     DEAL_STATE.PROGRESS
   );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
-    const txn = txns[i];
+    const txn: any = txns[i].toJSON();
     console.log("Txn: ", txn);
 
     // Total the txn's balance information
@@ -108,17 +108,17 @@ async function checkFundFbo() {
     const fboActiveBalance = totals.fbo.completed;
     const fboPendingBalance = totals.fbo.pending;
     const fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-    const amountRemaining = txn.amount - fboEffectiveBalance;
+    const amountRemaining = txn.total - fboEffectiveBalance;
 
     // Total the payer's balance information
     const payerActiveBalance = txn.payer_active_balance;
 
-    if (fboActiveBalance >= txn.amount) {
+    if (fboActiveBalance >= txn.total) {
       console.log(
         `TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
       );
       await Txn.updateFundState(txn.id, FUND_STATE.TO_FBO_TRANSFER_COMPLETE);
-    } else if (fboEffectiveBalance >= txn.amount) {
+    } else if (fboEffectiveBalance >= txn.total) {
       console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING UNCHANGED`);
     } else {
       console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> ISSUE_COMPLETE`);

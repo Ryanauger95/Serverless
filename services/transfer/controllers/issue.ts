@@ -31,7 +31,7 @@ async function issueFunds() {
       const totals = await totalTxn(txn.id);
       console.log("Totals: ", totals);
       const fboEffectiveBalance = totals.fbo.completed + totals.fbo.pending;
-      const amountRemaining = txn.amount - fboEffectiveBalance;
+      const amountRemaining = txn.total - fboEffectiveBalance;
       const fundsRequired = amountRemaining - payerEffectiveBalance;
 
       // If the user has enough in their account, we
@@ -102,19 +102,22 @@ async function checkIssued() {
     );
 
     for (var i = 0; i < txns.length; i++) {
-      const txn: any = txns[i];
+      const txn: any = txns[i].toJSON();
       const payerEffectiveBalance =
         txn.payer_active_balance + txn.payer_pending_balance;
+      console.log(
+        `Payer effective balance: ${payerEffectiveBalance} Total: ${txn.total}`
+      );
 
       // If the user has enough in their account, we
       // mark the txn as ISSUE_COMPLETE
-      if (txn.payer_active_balance >= txn.amount) {
+      if (txn.payer_active_balance >= txn.total) {
         console.log(`TXN(${txn.id}) ISSUE_PENDING -> ISSUE_COMPLETE`);
         await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
       }
       // If the user will have enough in their account,
       // then mark as issue pending
-      else if (payerEffectiveBalance >= txn.amount) {
+      else if (payerEffectiveBalance >= txn.total) {
         console.log(`TXN(${txn.id}) ISSUE_PENDING UNCHANGED`);
       }
       // Mark the txn as NOT_FUNDED

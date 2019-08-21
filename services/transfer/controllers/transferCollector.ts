@@ -5,14 +5,14 @@ import * as bankController from "../lib/controllers/sila";
 import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
 
 async function fundCollector() {
-  const txns: any = await fetchTransactions(
-    FUND_STATE.TO_FBO_TRANSFER_COMPLETE,
+  const txns = await fetchTransactions(
+    FUND_STATE.FEE_COMPLETE,
     DEAL_STATE.FINISHED
   );
   console.log("#txns: ", txns.length);
 
   for (var i = 0; i < txns.length; i++) {
-    const txn = txns[i];
+    const txn: any = txns[i].toJSON();
     console.log("Txn: ", txn);
 
     // Total the txn's balance information
@@ -77,13 +77,13 @@ async function fundCollector() {
 }
 async function checkFundCollector() {
   // Fetch all Txn's that are ready for FBO transfers
-  const txns: any = await fetchTransactions(
+  const txns = await fetchTransactions(
     FUND_STATE.FROM_FBO_TRANSFER_PENDING,
     DEAL_STATE.FINISHED
   );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
-    const txn = txns[i];
+    const txn: any = txns[i].toJSON();
     console.log("Txn: ", txn);
 
     // Total the txn's balance information

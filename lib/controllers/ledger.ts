@@ -20,6 +20,11 @@ async function totalTxn(txnId) {
       completed: 0,
       failed: 0
     },
+    fee: {
+      pending: 0,
+      completed: 0,
+      failed: 0
+    },
     collector: {
       pending: 0,
       completed: 0,
@@ -61,6 +66,28 @@ async function totalTxn(txnId) {
           totals.collector.pending += ledgerEntry.amount;
         } else if (ledgerEntry.state == LEDGER_STATE.FAILED) {
           totals.fbo.failed += ledgerEntry.amount;
+        }
+        break;
+      }
+      case LEDGER_TYPE.TRANSFER_TO_FEE: {
+        if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
+          totals.fbo.completed -= ledgerEntry.amount;
+          totals.fee.completed += ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.PENDING) {
+          totals.fbo.pending -= ledgerEntry.amount;
+          totals.fee.pending += ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.FAILED) {
+          totals.fbo.failed += ledgerEntry.amount;
+        }
+        break;
+      }
+      case LEDGER_TYPE.TRANSFER_FROM_FEE: {
+        if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
+          totals.fee.completed -= ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.PENDING) {
+          totals.fee.pending -= ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.FAILED) {
+          totals.fee.failed += ledgerEntry.amount;
         }
         break;
       }

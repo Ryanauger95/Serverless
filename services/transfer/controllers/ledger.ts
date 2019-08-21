@@ -34,13 +34,11 @@ async function updateLedgerEntries() {
     // Then, update the state if it changed
     // If there is an error, then it is a big error
     var handle: string = handleForType(pendingLedgerEntry);
-    const { transactions } = await getTransactions(handle);
+    const filter = { reference_id: pendingLedgerEntry.reference };
+    const { transactions } = await getTransactions(handle, filter);
+    const [transaction] = transactions;
+    console.log(transaction);
 
-    // Select the transaction in question
-    const transaction = findTransaction(
-      pendingLedgerEntry.reference,
-      transactions
-    );
     if (!transaction) {
       console.log("MASSIVE Error... Transaction not found!");
       return;

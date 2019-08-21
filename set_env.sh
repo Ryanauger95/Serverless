@@ -3,7 +3,7 @@
 ## MYSQL
 export AWS_MYSQL_HOST="database-1-test.c4pfxggmilyu.us-east-1.rds.amazonaws.com"
 export AWS_MYSQL_USERNAME="admin"
-export AWS_MYSQL_DBNAME="ryan_db_dev"
+export AWS_MYSQL_DBNAME="ryan_db_local"
 export AWS_MYSQL_PASSWORD="Cody123!"
 
 ### AWS

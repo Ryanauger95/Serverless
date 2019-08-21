@@ -43,6 +43,14 @@ functions:
     handler: controllers/transferFbo.checkFundFbo
     events:
       - schedule: rate(2 minutes)
+  transfer-fee_transfer:
+    handler: controllers/transferFee.fundFee
+    events:
+      - schedule: rate(2 minutes)
+  transfer-fee_update:
+    handler: controllers/transferFee.checkFundFee
+    events:
+      - schedule: rate(2 minutes)
   transfer-collector_transfer:
     handler: controllers/transferCollector.fundCollector
     events:

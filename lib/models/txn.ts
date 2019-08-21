@@ -2,6 +2,7 @@ import { BaseModel, knex } from "../handlers/mysql";
 import { SilaWallet } from "./wallet";
 import { LEDGER_STATE } from "./ledger";
 import { transaction } from "objection";
+import { start } from "repl";
 
 enum DEAL_STATE {
   DISPUTE = -3,
@@ -18,8 +19,10 @@ enum FUND_STATE {
   ISSUE_COMPLETE = 2,
   TO_FBO_TRANSFER_PENDING = 3,
   TO_FBO_TRANSFER_COMPLETE = 4,
-  FROM_FBO_TRANSFER_PENDING = 5,
-  FROM_FBO_TRANSFER_COMPLETE = 6
+  FEE_PENDING = 5,
+  FEE_COMPLETE = 6,
+  FROM_FBO_TRANSFER_PENDING = 7,
+  FROM_FBO_TRANSFER_COMPLETE = 8
 }
 const DEAL_ROLE = {
   SENDER: 0,
@@ -36,7 +39,7 @@ class Txn extends BaseModel {
   }
   total() {
     const txn: any = this;
-    return txn.amount + txn.start_fee;
+    return txn.amount + txn.start_fee + txn.arbitration_fee;
   }
   static get relationMappings() {
     const { User } = require("./user");
@@ -65,12 +68,15 @@ class Txn extends BaseModel {
   }
   static saveNew(
     amount,
+    startFee,
     reserve,
     description,
     payer,
     collector,
     originator,
-    period
+    period,
+    fboHandle,
+    feeHandle
   ) {
     return knex.transaction(async trx => {
       const [txnId] = await trx("txn").insert({
@@ -79,12 +85,12 @@ class Txn extends BaseModel {
         description: description,
         payer_id: payer,
         collector_id: collector,
-        originator_id: originator
+        originator_id: originator,
+        start_fee: startFee,
+        fbo_handle: fboHandle,
+        fee_handle: feeHandle
       });
       console.log("Txn_id: ", txnId);
-
-      const [fee_id] = await fee(trx, amount, txnId);
-      console.log("fee id: ", fee_id);
 
       const [holding_id] = await holdingPeriod(trx, period, txnId);
       console.log("holding id: ", holding_id.insertId);
