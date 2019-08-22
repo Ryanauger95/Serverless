@@ -34,7 +34,7 @@ async function create(event) {
     const body = parseAndValidate(event.body, schema);
 
     // Save TXN
-    const fee = body.amount * 0.02;
+    const fee = body.amount > 10000 ? body.amount * 0.2 : 200;
     const fboHandle = "ryan.test.silamoney.eth";
     const feeHandle = "ryan.test8.silamoney.eth";
     const txnId = await Txn.saveNew(

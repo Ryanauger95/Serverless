@@ -1,46 +1,62 @@
 import { BaseModel, knex } from "../handlers/mysql";
 import { SilaWallet } from "./wallet";
-import { LEDGER_STATE } from "./ledger";
-import { transaction } from "objection";
-import { start } from "repl";
 
 enum DEAL_STATE {
-  DISPUTE = -3,
-  TIMEOUT = -2,
-  CANCELLED = -1,
-  PENDING = 0,
-  PROGRESS = 1,
-  REVIEW = 2,
-  FINISHED = 3
+  DISPUTE = "DISPUTE",
+  TIMEOUT = "TIMEOUT",
+  CANCELLED = "CANCELLED",
+  PENDING = "PENDING",
+  PROGRESS = "PROGRESS",
+  REVIEW = "REVIEW",
+  COMPLETE = "COMPLETE"
 }
 enum FUND_STATE {
-  NOT_FUNDED = 0,
-  ISSUE_PENDING = 1,
-  ISSUE_COMPLETE = 2,
-  TO_FBO_TRANSFER_PENDING = 3,
-  TO_FBO_TRANSFER_COMPLETE = 4,
-  FEE_PENDING = 5,
-  FEE_COMPLETE = 6,
-  FROM_FBO_TRANSFER_PENDING = 7,
-  FROM_FBO_TRANSFER_COMPLETE = 8
+  NOT_FUNDED = "NOT_FUNDED",
+  ISSUE_PENDING = "ISSUE_PENDING",
+  ISSUE_COMPLETE = "ISSUE_COMPLETE",
+  TO_FBO_TRANSFER_PENDING = "TO_FBO_TRANSFER_PENDING",
+  TO_FBO_TRANSFER_COMPLETE = "TO_FBO_TRANSFER_COMPLETE",
+  FEE_PENDING = "FEE_PENDING",
+  FEE_COMPLETE = "FEE_COMPLETE",
+  FROM_FBO_TRANSFER_PENDING = "FROM_FBO_TRANSFER_PENDING",
+  FROM_FBO_TRANSFER_COMPLETE = "FROM_FBO_TRANSFER_COMPLETE"
 }
-const DEAL_ROLE = {
-  SENDER: 0,
-  RECEIVER: 1
-};
 
 class Txn extends BaseModel {
   static get tableName() {
     return "txn";
   }
-  // total is amount + fee + arb fee
+  /**
+   * total is amount + fee + arb fee
+   *
+   * @readonly
+   * @static
+   * @memberof Txn
+   */
   static get virtualAttributes() {
-    return ["total"];
+    return ["total", "totalFee"];
   }
+  /**
+   *
+   *
+   * @returns
+   * @memberof Txn
+   */
   total() {
     const txn: any = this;
     return txn.amount + txn.start_fee + txn.arbitration_fee;
   }
+  /**
+   *
+   *
+   * @returns
+   * @memberof Txn
+   */
+  totalFee() {
+    const txn: any = this;
+    return txn.start_fee + txn.arbitration_fee;
+  }
+
   static get relationMappings() {
     const { User } = require("./user");
     return {
@@ -98,10 +114,47 @@ class Txn extends BaseModel {
       return txnId;
     });
   }
+  /**
+   * Updates the FUND_STATE of a transaction.
+   * Optionally provide a trx argument to make this part
+   * of a transaction
+   *
+   * @static
+   * @param {number} txnId
+   * @param {FUND_STATE} newState
+   * @param {*} [trx]
+   * @returns
+   * @memberof Txn
+   */
   static updateFundState(txnId: number, newState: FUND_STATE, trx?: any) {
     return Txn.query(trx)
       .findById(txnId)
       .update({ fund_state: newState } as any);
+  }
+
+  /**
+   * Marks the transaction as CANCELLED_PENDING_TRANSFER, update
+   * canceller_id and return_reserve
+   *
+   * @static
+   * @param {number} txnId
+   * @param {number} cancellerId
+   * @param {boolean} returnReserve
+   * @returns
+   * @memberof Txn
+   */
+  static markCancelled(
+    txnId: number,
+    cancellerId: number,
+    returnReserve: boolean
+  ) {
+    return Txn.query()
+      .findById(txnId)
+      .update({
+        canceller_id: cancellerId,
+        return_reserve: returnReserve,
+        deal_state: DEAL_STATE.CANCELLED
+      } as any);
   }
 }
 
@@ -125,4 +178,4 @@ function holdingPeriod(trx, period, txnId) {
   });
 }
 
-export { Txn, FUND_STATE, DEAL_ROLE, DEAL_STATE, retreive };
+export { Txn, FUND_STATE, DEAL_STATE, retreive };

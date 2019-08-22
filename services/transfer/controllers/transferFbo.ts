@@ -1,4 +1,4 @@
-import { Txn, FUND_STATE, DEAL_ROLE, DEAL_STATE } from "../lib/models/txn";
+import { Txn, FUND_STATE, DEAL_STATE } from "../lib/models/txn";
 import { KYC_STATE } from "../lib/models/wallet";
 import {
   Ledger,

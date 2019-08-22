@@ -7,7 +7,7 @@ import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
 async function fundCollector() {
   const txns = await fetchTransactions(
     FUND_STATE.FEE_COMPLETE,
-    DEAL_STATE.FINISHED
+    DEAL_STATE.COMPLETE
   );
   console.log("#txns: ", txns.length);
 
@@ -29,16 +29,14 @@ async function fundCollector() {
     }
     if (collectorActiveBalance >= txn.amount) {
       // NOTE: We should throw an error here
-      console.log(
-        `TXN(${txn.id}) TO_FBO_TRANSFER_COMPLETE -> FROM_FBO_TRANSFER_COMPLETE`
-      );
+      console.log(`TXN(${txn.id}) FEE_COMPLETE -> FROM_FBO_TRANSFER_COMPLETE`);
       Txn.updateFundState(txn.id, FUND_STATE.FROM_FBO_TRANSFER_COMPLETE);
     } else if (amountRemaining === 0) {
-      console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_COMPLETE -> UNCHANGED`);
+      console.log(`TXN(${txn.id}) FEE_COMPLETE -> UNCHANGED`);
     } else {
       // Transfer the difference from the FBO to the User
       // Fund the amount remaining
-      const fboHandle = bankController.fboHandle;
+      const fboHandle = txn.fbo_handle;
       const res = await bankController.transferSila(
         fboHandle,
         txn.collector_handle,
@@ -79,7 +77,7 @@ async function checkFundCollector() {
   // Fetch all Txn's that are ready for FBO transfers
   const txns = await fetchTransactions(
     FUND_STATE.FROM_FBO_TRANSFER_PENDING,
-    DEAL_STATE.FINISHED
+    DEAL_STATE.COMPLETE
   );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
@@ -102,10 +100,8 @@ async function checkFundCollector() {
     } else if (collectorEffectiveBalance >= txn.amount) {
       console.log(`TXN(${txn.id}) FROM_FBO_TRANSFER_PENDING UNCHANGED`);
     } else {
-      console.log(
-        `TXN(${txn.id}) FROM_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
-      );
-      await Txn.updateFundState(txn.id, FUND_STATE.TO_FBO_TRANSFER_COMPLETE);
+      console.log(`TXN(${txn.id}) FROM_FBO_TRANSFER_PENDING -> FEE_COMPLETE`);
+      await Txn.updateFundState(txn.id, FUND_STATE.FEE_COMPLETE);
     }
   }
 }

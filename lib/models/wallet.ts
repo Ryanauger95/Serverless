@@ -2,19 +2,19 @@
 // const {Model, knex} = require('../handlers/mysql');
 import { Model, knex } from "../handlers/mysql";
 
-const KYC_STATE = {
-  UNKNOWN: -2,
-  FAILED: -1,
-  NOT_STARTED: 0,
-  PENDING: 1,
-  COMPLETED: 2
-};
+enum KYC_STATE {
+  UNKNOWN = "UNKNOWN",
+  FAILED = "FAILED",
+  NOT_STARTED = "NOT_STARTED",
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED"
+}
 
-const ACCOUNT_TYPE = {
-  USER: 0,
-  FBO: 1,
-  FEE: 2
-};
+enum ACCOUNT_TYPE {
+  USER = "USER",
+  FBO = "FBO",
+  FEE = "FEE"
+}
 
 const silaTableName: string = "sila_wallet";
 class SilaWallet extends Model {

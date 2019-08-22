@@ -35,9 +35,9 @@ async function updateLedgerEntries() {
     // If there is an error, then it is a big error
     var handle: string = handleForType(pendingLedgerEntry);
     const filter = { reference_id: pendingLedgerEntry.reference };
+    console.log("Test");
     const { transactions } = await getTransactions(handle, filter);
     const [transaction] = transactions;
-    console.log(transaction);
 
     if (!transaction) {
       console.log("MASSIVE Error... Transaction not found!");
@@ -98,6 +98,8 @@ function handleForType(ledgerEntry: any): string {
     }
     case LEDGER_TYPE.TRANSFER_TO_FBO:
     case LEDGER_TYPE.TRANSFER_FROM_FBO:
+    case LEDGER_TYPE.TRANSFER_TO_FEE:
+    case LEDGER_TYPE.TRANSFER_FROM_FEE:
     case LEDGER_TYPE.REDEEM: {
       return ledgerEntry.from_handle;
     }
