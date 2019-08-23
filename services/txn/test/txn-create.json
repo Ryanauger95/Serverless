@@ -1,7 +1,7 @@
 {
    "body": {
 	"amount": 400,
-	"reserve": 100,
+	"reserve": 200,
 	"description": "Test",
 	"holding_period": 13,
 	"payer": 65,

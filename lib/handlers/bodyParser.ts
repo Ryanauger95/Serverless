@@ -1,4 +1,5 @@
 import { CodeError } from "./error";
+import { ConfigurationServicePlaceholders } from "aws-sdk/lib/config_service_placeholders";
 
 // Parse and validate POST body
 function parse(data) {

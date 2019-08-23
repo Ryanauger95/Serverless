@@ -10,7 +10,7 @@ function fetchTransactions(fundState: FUND_STATE, dealState: DEAL_STATE) {
   const where = {};
   const select = ["txn.*"];
   const join = { table: null, cond1: null, cond2: null };
-  if (dealState <= DEAL_STATE.PROGRESS) {
+  if (dealState === DEAL_STATE.PROGRESS) {
     where["payer_wallet.active"] = true;
     where["payer_wallet.kyc_state"] = KYC_STATE.COMPLETED;
     where["payer_wallet.bank_linked"] = true;
@@ -44,4 +44,42 @@ function fetchTransactions(fundState: FUND_STATE, dealState: DEAL_STATE) {
     .andWhere({ "txn.fund_state": fundState, "txn.deal_state": dealState });
 }
 
-export { fetchTransactions };
+function fetchEndedPendingTransactions() {
+  return Txn.query()
+    .select([
+      "txn.*",
+      "payer_wallet.handle as payer_handle",
+      "collector_wallet.handle as collector_handle"
+    ])
+    .join(
+      "sila_wallet as payer_wallet",
+      "txn.payer_id",
+      "payer_wallet.app_users_id"
+    )
+    .join(
+      "sila_wallet as collector_wallet",
+      "txn.collector_id",
+      "collector_wallet.app_users_id"
+    )
+    .where({
+      "payer_wallet.active": true,
+      "payer_wallet.kyc_state": KYC_STATE.COMPLETED,
+      "payer_wallet.bank_linked": true,
+      "collector_wallet.active": true,
+      "collector_wallet.kyc_state": KYC_STATE.COMPLETED,
+      "collector_wallet.bank_linked": true
+    })
+    .andWhere(function() {
+      this.orWhere("txn.deal_state", DEAL_STATE.COMPLETE).orWhere(
+        "txn.deal_state",
+        DEAL_STATE.CANCELLED
+      );
+    })
+    .andWhere(function() {
+      this.orWhere("txn.fund_state", FUND_STATE.FEE_COMPLETE).orWhere(
+        "txn.fund_state",
+        FUND_STATE.FROM_FBO_TRANSFER_PENDING
+      );
+    });
+}
+export { fetchTransactions, fetchEndedPendingTransactions };

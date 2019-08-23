@@ -1,14 +1,7 @@
-import { SilaWallet, KYC_STATE } from "../lib/models/wallet";
 import { Txn, FUND_STATE, DEAL_STATE } from "../lib/models/txn";
-import {
-  Ledger,
-  LEDGER_STATE,
-  SILA_HANDLE,
-  LEDGER_TYPE
-} from "../lib/models/ledger";
-import * as bankController from "../lib/controllers/sila.js";
 import { totalTxn } from "../lib/controllers/ledger";
 import { fetchTransactions } from "./common";
+import * as funds from "../lib/controllers/funds";
 
 // For each transaction that is not funded,
 // if the payer DOES NOT have enough money,
@@ -46,45 +39,14 @@ async function issueFunds() {
         console.log(`TXN(${txn.id}) NOT_FUNDED -> ISSUE_PENDING`);
         await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_PENDING);
       } else if (fundsRequired > 0) {
-        // Else, fund the payer and mark ISSUE_PENDING
+        //
         console.log(`TXN(${txn.id}) issuing ${fundsRequired}`);
-        const res = await bankController.issueSila(
+        await funds.issue(
+          txn.payer_handle,
           fundsRequired,
-          txn.payer_handle
+          txn.id,
+          FUND_STATE.ISSUE_PENDING
         );
-        console.log("Issue Sila Result: ", res);
-        if (res.status != "SUCCESS") {
-          throw Error(res);
-        }
-
-        // Store in ledger
-        var trx;
-        try {
-          trx = await Ledger.transaction.start(Ledger.knex());
-          await Ledger.insertLedgerAndUpdateBalanceTrx(
-            trx,
-            txn.payer_handle,
-            SILA_HANDLE,
-            res.reference,
-            LEDGER_TYPE.ISSUE,
-            fundsRequired,
-            LEDGER_STATE.PENDING,
-            txn.id
-          );
-          await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_PENDING, trx);
-          trx.commit();
-        } catch (err) {
-          trx.rollback();
-          console.log(
-            `ISSUE,PAYER:${txn.payer_handle},REFERENCE:${
-              res.reference
-            },FUNDS:${fundsRequired},TXN:${txn.id}`
-          );
-          console.log("Catastrophic Error: ", err);
-        }
-        // .catch(err => {
-        //   console.log("Error issuing funds: ", err);
-        // });
       }
     }
   } catch (err) {

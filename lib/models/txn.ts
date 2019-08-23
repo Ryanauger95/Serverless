@@ -10,6 +10,12 @@ enum DEAL_STATE {
   REVIEW = "REVIEW",
   COMPLETE = "COMPLETE"
 }
+/**
+ * Funding state. Describes in which direction funds are currently flowing.
+ * Funds can only flow one operation at a time.
+ *
+ * @enum {number}
+ */
 enum FUND_STATE {
   NOT_FUNDED = "NOT_FUNDED",
   ISSUE_PENDING = "ISSUE_PENDING",
@@ -133,6 +139,22 @@ class Txn extends BaseModel {
   }
 
   /**
+   * Update the deal state of the transaction
+   *
+   * @static
+   * @param {number} txnId
+   * @param {DEAL_STATE} newState
+   * @param {*} [trx]
+   * @returns
+   * @memberof Txn
+   */
+  static markReview(txnId: number, trx?: any) {
+    return Txn.query(trx)
+      .findById(txnId)
+      .update({ deal_state: DEAL_STATE.REVIEW } as any);
+  }
+
+  /**
    * Marks the transaction as CANCELLED_PENDING_TRANSFER, update
    * canceller_id and return_reserve
    *
@@ -148,12 +170,68 @@ class Txn extends BaseModel {
     cancellerId: number,
     returnReserve: boolean
   ) {
+    const update = {
+      canceller_id: cancellerId,
+      return_reserve: returnReserve,
+      deal_state: DEAL_STATE.CANCELLED,
+      cancelled_date: new Date()
+    };
+    if (returnReserve === true) {
+      update["payer_amount"] = Txn.raw("amount - reserve");
+      update["collector_amount"] = Txn.raw("reserve");
+    } else {
+      update["payer_amount"] = Txn.raw("amount");
+      update["collector_amount"] = Txn.raw("0");
+    }
     return Txn.query()
       .findById(txnId)
+      .update(update as any);
+  }
+
+  /**
+   * Mark the transaction as complete
+   *
+   * @static
+   * @param {number} txnId
+   * @param {*} [trx]
+   * @memberof Txn
+   */
+  static markComplete(txnId: number, trx?) {
+    return Txn.query(trx)
+      .findById(txnId)
       .update({
-        canceller_id: cancellerId,
-        return_reserve: returnReserve,
-        deal_state: DEAL_STATE.CANCELLED
+        deal_state: DEAL_STATE.COMPLETE,
+        completed_date: new Date()
+      } as any);
+  }
+
+  /**
+   * Mark the transaction as in dispute and set the dispute_date
+   *
+   * @static
+   * @param {number} txnId
+   * @param {number} disputeReplyId
+   * @param {number} disputePayerAmount
+   * @param {number} disputeCollectorAmount
+   * @param {*} [trx]
+   * @returns
+   * @memberof Txn
+   */
+  static markDispute(
+    txnId: number,
+    disputeReplyId: number,
+    disputePayerAmount: number,
+    disputeCollectorAmount: number,
+    trx?: any
+  ) {
+    return Txn.query(trx)
+      .findById(txnId)
+      .update({
+        dispute_reply_id: disputeReplyId,
+        payer_amount: disputePayerAmount,
+        collector_amount: disputeCollectorAmount,
+        dispute_date: new Date(),
+        deal_state: DEAL_STATE.DISPUTE
       } as any);
   }
 }

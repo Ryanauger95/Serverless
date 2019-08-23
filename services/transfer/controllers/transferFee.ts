@@ -3,6 +3,7 @@ import { totalTxn } from "../lib/controllers/ledger";
 import { FUND_STATE, DEAL_STATE, Txn } from "../lib/models/txn";
 import * as bankController from "../lib/controllers/sila";
 import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
+import * as funds from "../lib/controllers/funds";
 
 async function fundFee() {
   const txns = await fetchTransactions(
@@ -36,34 +37,14 @@ async function fundFee() {
       console.log(
         `TXN(${txn.id}) transferring(${feeRemaining}) to ${feeHandle}`
       );
-      const res = await bankController.transferSila(
+      await funds.transfer(
         fboHandle,
         feeHandle,
-        feeRemaining
+        feeRemaining,
+        LEDGER_TYPE.TRANSFER_FROM_FBO_TO_FEE,
+        txn.id,
+        FUND_STATE.FEE_PENDING
       );
-      console.log("Transfer Sila Res: ", res);
-      // insert ledger
-      // &
-      // mark transfer pending
-      var trx;
-      try {
-        trx = await Ledger.transaction.start(Ledger.knex());
-        await Ledger.insertLedgerAndUpdateBalanceTrx(
-          trx,
-          feeHandle,
-          fboHandle,
-          res.reference,
-          LEDGER_TYPE.TRANSFER_TO_FEE,
-          feeRemaining,
-          LEDGER_STATE.PENDING,
-          txn.id
-        );
-        await Txn.updateFundState(txn.id, FUND_STATE.FEE_PENDING, trx);
-        trx.commit();
-      } catch (err) {
-        console.log("Catastrophic Error: ", err);
-        trx.rollback();
-      }
     } else {
       throw Error("Error");
     }

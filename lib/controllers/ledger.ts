@@ -1,10 +1,8 @@
 import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../models/ledger";
-import { SilaWallet, ACCOUNT_TYPE } from "../models/wallet";
-import { transaction } from "objection";
 
 // Return the total amount of money transacted in the
 // ledger for a txn
-async function totalTxn(txnId) {
+async function totalTxn(txnId: number) {
   const ledger: any = await Ledger.query()
     .select("*")
     .where({ txn_id: txnId });
@@ -45,7 +43,7 @@ async function totalTxn(txnId) {
         }
         break;
       }
-      case LEDGER_TYPE.TRANSFER_TO_FBO: {
+      case LEDGER_TYPE.TRANSFER_FROM_PAYER_TO_FBO: {
         if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
           totals.payer.completed -= ledgerEntry.amount;
           totals.fbo.completed += ledgerEntry.amount;
@@ -57,7 +55,7 @@ async function totalTxn(txnId) {
         }
         break;
       }
-      case LEDGER_TYPE.TRANSFER_FROM_FBO: {
+      case LEDGER_TYPE.TRANSFER_FROM_FBO_TO_COLLECTOR: {
         if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
           totals.fbo.completed -= ledgerEntry.amount;
           totals.collector.completed += ledgerEntry.amount;
@@ -69,7 +67,19 @@ async function totalTxn(txnId) {
         }
         break;
       }
-      case LEDGER_TYPE.TRANSFER_TO_FEE: {
+      case LEDGER_TYPE.TRANSFER_FROM_FBO_TO_PAYER: {
+        if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
+          totals.fbo.completed -= ledgerEntry.amount;
+          totals.payer.completed += ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.PENDING) {
+          totals.fbo.pending -= ledgerEntry.amount;
+          totals.payer.pending += ledgerEntry.amount;
+        } else if (ledgerEntry.state == LEDGER_STATE.FAILED) {
+          totals.fbo.failed += ledgerEntry.amount;
+        }
+        break;
+      }
+      case LEDGER_TYPE.TRANSFER_FROM_FBO_TO_FEE: {
         if (ledgerEntry.state == LEDGER_STATE.COMPLETED) {
           totals.fbo.completed -= ledgerEntry.amount;
           totals.fee.completed += ledgerEntry.amount;
@@ -101,26 +111,12 @@ async function totalTxn(txnId) {
         }
         break;
       }
+      default: {
+        throw Error(`Decoding ledger type(${ledgerEntry.type})`);
+      }
     }
   }
   return totals;
 }
 
-async function transferType(fromHandle, toHandle) {
-  const fboAccounts = (await SilaWallet.query()
-    .select("handle")
-    .where({ account_type: ACCOUNT_TYPE.FBO })) as any;
-
-  // Check if transfer to
-  for (var i = 0; i < fboAccounts.length; i++) {
-    const account = fboAccounts[i];
-    if (toHandle === account.handle) {
-      return LEDGER_TYPE.TRANSFER_TO_FBO;
-    } else if (fromHandle === account.handle) {
-      return LEDGER_TYPE.TRANSFER_FROM_FBO;
-    }
-  }
-  return LEDGER_TYPE.UNKNOWN;
-}
-
-export { totalTxn, transferType };
+export { totalTxn };

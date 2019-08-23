@@ -1,25 +1,23 @@
-import { BaseModel, transaction, knex } from "../handlers/mysql";
+import { BaseModel } from "../handlers/mysql";
 import { SilaWallet } from "../models/wallet";
-import { stat } from "fs";
 
 enum LEDGER_STATE {
   UNKNOWN = "UNKNOWN",
   FAILED = "FAILED",
   PENDING = "PENDING",
-  COMPLETED = "COMPLETED "
+  COMPLETED = "COMPLETED"
 }
 
 enum LEDGER_TYPE {
   UNKNOWN = "UNKNOWN",
   ISSUE = "ISSUE",
-  TRANSFER_TO_FBO = "TRANSFER_TO_FBO",
-  TRANSFER_FROM_FBO = "TRANSFER_FROM_FBO",
-  TRANSFER_TO_FEE = "TRANSFER_TO_FEE",
+  TRANSFER_FROM_PAYER_TO_FBO = "TRANSFER_FROM_PAYER_TO_FBO",
+  TRANSFER_FROM_FBO_TO_PAYER = "TRANSFER_FROM_FBO_TO_PAYER",
+  TRANSFER_FROM_FBO_TO_COLLECTOR = "TRANSFER_FROM_FBO_TO_COLLECTOR",
+  TRANSFER_FROM_FBO_TO_FEE = "TRANSFER_FROM_FBO_TO_FEE",
   TRANSFER_FROM_FEE = "TRANSFER_FROM_FEE",
   REDEEM = "REDEEM"
 }
-
-const SILA_HANDLE = "SILA_ISSUED";
 
 class Ledger extends BaseModel {
   // The insert function simply requires that
@@ -63,8 +61,8 @@ class Ledger extends BaseModel {
   }
   static async insertLedgerAndUpdateBalanceTrx(
     trx,
-    toHandle,
     fromHandle,
+    toHandle,
     reference,
     type,
     amount,
@@ -81,6 +79,24 @@ class Ledger extends BaseModel {
       txn_id: txnId
     } as any);
 
+    await this.updateWalletBalances(
+      trx,
+      fromHandle,
+      toHandle,
+      type,
+      amount,
+      state
+    );
+  }
+
+  static async updateWalletBalances(
+    trx,
+    fromHandle,
+    toHandle,
+    type,
+    amount,
+    state
+  ) {
     // If the state is failed, and it doesnt already exits,
     // then we don't have to worry about users' balances
     if (state === LEDGER_STATE.FAILED) {
@@ -135,8 +151,7 @@ class Ledger extends BaseModel {
       // fromHandle:
       //   Completed: (-active)
       //   Pending: (- pending))
-      case LEDGER_TYPE.TRANSFER_TO_FBO:
-      case LEDGER_TYPE.TRANSFER_FROM_FBO: {
+      default: {
         // Update the ToHandle Wallet
         var balanceType: string =
           state === LEDGER_STATE.COMPLETED
@@ -242,92 +257,16 @@ class Ledger extends BaseModel {
       state
     );
 
-    // Update the users' balances
-    switch (type) {
-      // Takes ACH transfer, converts to sila token
-      // Completed: (+ active, - pending)
-      // Failed: (- pending)
-      case LEDGER_TYPE.ISSUE: {
-        const patchJSON = {
-          pending_balance: this.raw("pending_balance -" + String(amount))
-        };
-        if (state === LEDGER_STATE.COMPLETED) {
-          patchJSON["active_balance"] = this.raw(
-            "active_balance +" + String(amount)
-          );
-        }
-        await SilaWallet.query(trx)
-          .patch(patchJSON as any)
-          .where({
-            handle: toHandle
-          });
-        break;
-      }
-
-      // Transfers sila token back to SILA in exchange for $
-      // Completed: (- active, +pending)
-      // Failed:: (+ pending)
-      case LEDGER_TYPE.REDEEM: {
-        const patchJSON = {
-          pending_balance: this.raw("pending_balance +" + String(amount))
-        };
-        if (state === LEDGER_STATE.COMPLETED) {
-          patchJSON["active_balance"] = this.raw(
-            "active_balance -" + String(amount)
-          );
-        }
-        await SilaWallet.query(trx)
-          .patch(patchJSON as any)
-          .where({
-            handle: fromHandle
-          });
-        break;
-      }
-
-      // Transfer from one SILA Address to Another
-      // toHandle:
-      //   Completed: (+ active, - pending)
-      //   Failed: (- pending)
-      // fromHandle:
-      //   Completed: (-active, +pending)
-      //   Failed: (+ pending)
-      case LEDGER_TYPE.TRANSFER_TO_FBO:
-      case LEDGER_TYPE.TRANSFER_FROM_FBO: {
-        // Update the ToHandle Wallet
-        const patchToHandleJSON = {
-          pending_balance: this.raw("pending_balance -" + String(amount))
-        };
-        if (state === LEDGER_STATE.COMPLETED) {
-          patchToHandleJSON["active_balance"] = this.raw(
-            "active_balance +" + String(amount)
-          );
-        }
-
-        await SilaWallet.query(trx)
-          .patch(patchToHandleJSON as any)
-          .where({
-            handle: toHandle
-          });
-
-        // Update the FromHandle Wallet
-        const patchFromHandleJSON = {
-          pending_balance: this.raw("pending_balance +" + String(amount))
-        };
-        if (state === LEDGER_STATE.COMPLETED) {
-          patchFromHandleJSON["active_balance"] = this.raw(
-            "active_balance -" + String(amount)
-          );
-        }
-
-        await SilaWallet.query(trx)
-          .patch(patchFromHandleJSON as any)
-          .where({
-            handle: fromHandle
-          });
-        break;
-      }
-    }
+    await this.updateWalletBalances(
+      trx,
+      fromHandle,
+      toHandle,
+      type,
+      amount,
+      state
+    );
   }
+
   // Update the ledger entry's state
   // This will fail if the entry DNE already
   // NOTE: This query ensures that all fields match except for
@@ -364,4 +303,4 @@ class Ledger extends BaseModel {
   }
 }
 
-export { Ledger, LEDGER_STATE, LEDGER_TYPE, SILA_HANDLE };
+export { Ledger, LEDGER_STATE, LEDGER_TYPE };

@@ -37,6 +37,13 @@ functions:
           path: txn/{txn_id}
           method: get
           cors: true
+  txn-update:
+    handler: controllers/update.update
+    events:
+      - http:
+          path: txn/{txn_id}
+          method: put
+          cors: true
           # authorizer:
           #   name: esgro-users-authorizer
           #   arn: arn:aws:cognito-idp:us-east-1:532299806817:userpool/us-east-1_289MZHUoN

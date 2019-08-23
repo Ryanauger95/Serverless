@@ -1,11 +1,5 @@
-import {
-  Ledger,
-  LEDGER_STATE,
-  LEDGER_TYPE,
-  SILA_HANDLE
-} from "../lib/models/ledger";
+import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
 import { getTransactions } from "../lib/controllers/sila.js";
-import { transferType } from "../lib/controllers/ledger";
 
 /****************************************
  * EXTERNAL FUNCTIONS
@@ -96,11 +90,7 @@ function handleForType(ledgerEntry: any): string {
     case LEDGER_TYPE.ISSUE: {
       return ledgerEntry.to_handle;
     }
-    case LEDGER_TYPE.TRANSFER_TO_FBO:
-    case LEDGER_TYPE.TRANSFER_FROM_FBO:
-    case LEDGER_TYPE.TRANSFER_TO_FEE:
-    case LEDGER_TYPE.TRANSFER_FROM_FEE:
-    case LEDGER_TYPE.REDEEM: {
+    default: {
       return ledgerEntry.from_handle;
     }
   }

@@ -1,14 +1,9 @@
 import { Txn, FUND_STATE, DEAL_STATE } from "../lib/models/txn";
-import { KYC_STATE } from "../lib/models/wallet";
-import {
-  Ledger,
-  LEDGER_STATE,
-  SILA_HANDLE,
-  LEDGER_TYPE
-} from "../lib/models/ledger";
+import { LEDGER_TYPE } from "../lib/models/ledger";
 import * as bankController from "../lib/controllers/sila";
 import { totalTxn } from "../lib/controllers/ledger";
 import { fetchTransactions } from "./common";
+import * as funds from "../lib/controllers/funds";
 
 async function fundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
@@ -49,44 +44,18 @@ async function fundFbo() {
     else if (amountRemaining > payerActiveBalance) {
       console.log(`TXN(${txn.id}) ISSUE_COMPLETE -> NOT_FUNDED`);
       await Txn.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
-    }
-    // Transfer $
-    else {
+    } else {
+      // Transfer $
       // Fund the amount remaining
       const fboHandle = bankController.fboHandle;
-      const res = await bankController.transferSila(
+      await funds.transfer(
         txn.payer_handle,
         fboHandle,
-        amountRemaining
+        amountRemaining,
+        LEDGER_TYPE.TRANSFER_FROM_PAYER_TO_FBO,
+        txn.id,
+        FUND_STATE.TO_FBO_TRANSFER_PENDING
       );
-      console.log("Transfer Sila Res: ", res);
-      // insert ledger
-      // &
-      // mark transfer pending
-      var trx;
-      try {
-        trx = await Ledger.transaction.start(Ledger.knex());
-        await Ledger.insertLedgerAndUpdateBalanceTrx(
-          trx,
-          fboHandle,
-          txn.payer_handle,
-          res.reference,
-          LEDGER_TYPE.TRANSFER_TO_FBO,
-          amountRemaining,
-          LEDGER_STATE.PENDING,
-          txn.id
-        );
-        await Txn.updateFundState(
-          txn.id,
-          FUND_STATE.TO_FBO_TRANSFER_PENDING,
-          trx
-        );
-
-        trx.commit();
-      } catch (err) {
-        console.log("Catastrophic Error: ", err);
-        trx.rollback();
-      }
     }
   }
 }

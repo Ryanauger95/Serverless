@@ -51,11 +51,11 @@ functions:
     handler: controllers/transferFee.checkFundFee
     events:
       - schedule: rate(2 minutes)
-  transfer-collector_transfer:
-    handler: controllers/transferCollector.fundCollector
+  transfer-disperse_funds:
+    handler: controllers/disperseFunds.disperseFunds
     events:
       - schedule: rate(2 minutes)
-  transfer-collector_update:
-    handler: controllers/transferCollector.checkFundCollector
-    events:
-      - schedule: rate(2 minutes)
+  # transfer-collector_update:
+  #   handler: controllers/transferCollector.checkFundCollector
+  #   events:
+  #     - schedule: rate(2 minutes)
