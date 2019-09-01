@@ -55,7 +55,7 @@ functions:
           method: get
           cors: true
           authorizer: wallet-authorizer
-  wallet-kyc-check-all:
+  wallet-kyc-check_all:
     handler: controllers/kyc.checkAll
     events:
       - schedule: rate(15 minutes)

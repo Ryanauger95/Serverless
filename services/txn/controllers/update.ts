@@ -1,4 +1,4 @@
-import { TxnController, DEAL_STATE } from "../lib/controllers/txn";
+import { TxnController, DEAL_STATE, FUND_STATE } from "../lib/controllers/txn";
 import * as Joi from "joi";
 import { parseAndValidate } from "../lib/handlers/bodyParser";
 import { HttpResponse } from "../lib/models/httpResponse";
@@ -54,7 +54,13 @@ async function update({
       if (txn.deal_state === DEAL_STATE.PENDING) {
         await pendingStateChange(txn, principalId, body.new_state);
       } else if (txn.deal_state === DEAL_STATE.PROGRESS) {
-        await progressStateChange(txn, principalId, body.new_state);
+        if (txn.fund_state === FUND_STATE.FEE_COMPLETE) {
+          await progressStateChange(txn, principalId, body.new_state);
+        } else {
+          throw Error(
+            "Cannot update a PROGRESS state until funds have settled"
+          );
+        }
       } else if (txn.deal_state === DEAL_STATE.REVIEW) {
         await reviewStateChange(
           txn,

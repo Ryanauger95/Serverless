@@ -34,6 +34,14 @@ functions:
           method: post
           cors: true
           authorizer: txn-authorizer
+ txn-fee:
+    handler: controllers/fee.checkFee
+    events:
+      - http:
+          path: txn/fee
+          method: post
+          cors: true
+          authorizer: txn-authorizer
   txn-fetch:
     handler: controllers/retreive.retreive
     events:
@@ -58,6 +66,7 @@ functions:
           method: put
           cors: true
           authorizer: txn-authorizer
+
   txn-authorizer:
     name: txn-authorizer
     handler: lib/controllers/authorizer.defaultAuthorizer

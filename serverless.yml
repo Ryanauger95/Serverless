@@ -89,6 +89,14 @@ functions:
           method: post
           cors: true
           authorizer: txn-authorizer
+  txn-fee:
+    handler: services/txn/controllers/fee.checkFee
+    events:
+      - http:
+          path: txn/fee
+          method: post
+          cors: true
+          authorizer: txn-authorizer
   txn-fetch:
     handler: services/txn/controllers/retreive.retreive
     events:

@@ -48,11 +48,6 @@ async function issueFunds() {
         amountRemaining
       );
 
-      if (amountRemaining < 0) {
-        throw Error(
-          `MAJOR ERROR, NOT FUNDED BUT amountRemaining(${amountRemaining})`
-        );
-      }
       // Fund the payer amountRemaining
       if (amountRemaining > 0) {
         await funds.issue(payerInfo.payer_handle, amountRemaining, null);

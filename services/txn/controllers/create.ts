@@ -2,6 +2,7 @@ import { TxnController, DEAL_STATE } from "../lib/controllers/txn";
 import * as Joi from "joi";
 import { parseAndValidate } from "../lib/handlers/bodyParser";
 import { HttpResponse } from "../lib/models/httpResponse";
+import { calculateFee } from "./fee";
 
 // POST Body format validator
 const schema = Joi.object().keys({
@@ -36,7 +37,7 @@ async function create({
     const body = parseAndValidate(bodyUnvalidated, schema);
 
     // Save TXN
-    const fee = body.amount > 10000 ? body.amount * 0.2 : 200;
+    const fee = calculateFee(body.amount, body.originator);
     const fboHandle = "ryan.test.silamoney.eth";
     const feeHandle = "ryan.test8.silamoney.eth";
     const txnId = await TxnController.saveNew(
