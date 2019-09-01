@@ -1,0 +1,171 @@
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: all
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: us-east-1
+  environment:
+    AWS_MYSQL_HOST: ${env:AWS_MYSQL_HOST}
+    AWS_MYSQL_USERNAME: ${env:AWS_MYSQL_USERNAME}
+    AWS_MYSQL_DBNAME: ${env:AWS_MYSQL_DBNAME}
+    AWS_MYSQL_PASSWORD: ${env:AWS_MYSQL_PASSWORD}
+    AWS_KEY: ${env:AWS_KEY}
+    AWS_SECRET: ${env:AWS_SECRET}
+    AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
+    AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
+    TWILIO_SID: ${env:TWILIO_SID}
+    TWILIO_TOKEN: ${env:TWILIO_TOKEN}
+    TWILIO_FROM: ${env:TWILIO_FROM}
+    # AWS_USER_WALLET_REGISTERED_TOPIC_ARN:
+
+functions:
+  ### USER
+  user-create:
+    handler: services/user/controllers/create.create
+    events:
+      - http:
+          path: user
+          method: post
+          cors: true
+          ## NO AUTHORIZER
+  user-fetch:
+    handler: services/user/controllers/user.fetch
+    events:
+      - http:
+          path: user/{user_id}
+          method: get
+          cors: true
+          authorizer: user-authorizer
+  user-fetch_query:
+    handler: services/user/controllers/user.fetchQuery
+    events:
+      - http:
+          path: user
+          method: get
+          cors: true
+          authorizer: user-authorizer
+  user-update:
+    handler: services/user/controllers/update.update
+    events:
+      - http:
+          path: user
+          method: put
+          cors: true
+          authorizer: user-authorizer
+  user-update-profile_img:
+    handler: services/user/controllers/update.profileImg
+    events:
+      - http:
+          path: user/profile_img
+          method: put
+          cors: true
+          authorizer: user-authorizer
+  user-validate:
+    handler: services/user/controllers/user.validate
+    events:
+      - http:
+          path: user/{user_id}/validate
+          method: post
+          cors: true
+          authorizer: user-authorizer
+  user-authorizer:
+    name: user-authorizer
+    handler: lib/controllers/authorizer.defaultAuthorizer
+
+  ### TXNS
+  txn-create:
+    handler: services/txn/controllers/create.create
+    events:
+      - http:
+          path: txn
+          method: post
+          cors: true
+          authorizer: txn-authorizer
+  txn-fetch:
+    handler: services/txn/controllers/retreive.retreive
+    events:
+      - http:
+          path: txn/{txn_id}
+          method: get
+          cors: true
+          authorizer: txn-authorizer
+  txn-fetch_all:
+    handler: services/txn/controllers/retreive.allForUser
+    events:
+      - http:
+          path: txn
+          method: get
+          cors: true
+          authorizer: txn-authorizer
+  txn-update:
+    handler: services/txn/controllers/update.update
+    events:
+      - http:
+          path: txn/{txn_id}
+          method: put
+          cors: true
+          authorizer: txn-authorizer
+  txn-authorizer:
+    name: txn-authorizer
+    handler: lib/controllers/authorizer.defaultAuthorizer
+  ### WALLET
+  wallet-create:
+    handler: services/wallet/controllers/wallet.create
+    events:
+      - http:
+          path: /user/{user_id}/wallet
+          method: post
+          cors: true
+          authorizer: wallet-authorizer
+  wallet-fetch:
+    handler: services/wallet/controllers/wallet.fetch
+    events:
+      - http:
+          path: /user/{user_id}/wallet
+          method: get
+          cors: true
+          authorizer: wallet-authorizer
+  wallet-link_account:
+    handler: services/wallet/controllers/accounts.link
+    events:
+      - http:
+          path: /user/{user_id}/wallet/accounts
+          method: post
+          cors: true
+          authorizer: wallet-authorizer
+  wallet-get_accounts:
+    handler: services/wallet/controllers/accounts.get
+    events:
+      - http:
+          path: /user/{user_id}/wallet/accounts
+          method: get
+          cors: true
+          authorizer: wallet-authorizer
+  wallet-kyc-check-all:
+    handler: services/wallet/controllers/kyc.checkAll
+    events:
+      - schedule: rate(15 minutes)
+  wallet-authorizer:
+    name: authorizer
+    handler: lib/controllers/authorizer.defaultAuthorizer
+
+
+resources:
+  Resources:
+    S3BucketPhotos:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: holdr-${self:provider.stage}-user-photos
+        # add additional custom bucket configuration here
+
+
+package:
+  excludeDevDependencies: false

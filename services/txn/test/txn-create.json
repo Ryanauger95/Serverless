@@ -4,8 +4,8 @@
 	"reserve": 200,
 	"description": "Test",
 	"holding_period": 13,
-	"payer": 65,
-	"collector": 66,
+	"payer": 66,
+	"collector": 65,
 	"originator": 66
 	}
 }

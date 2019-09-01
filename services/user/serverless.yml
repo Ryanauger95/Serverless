@@ -3,8 +3,9 @@
 
 service: user
 frameworkVersion: ">=1.1.0 <2.0.0"
-app: rest-api-user
-org: ryanauger
+
+plugins:
+  - serverless-offline
 
 provider:
   name: aws
@@ -27,12 +28,13 @@ provider:
 
 functions:
   user-create:
-    handler: controllers/user.register
+    handler: controllers/create.create
     events:
       - http:
           path: user
           method: post
           cors: true
+          ## NO AUTHORIZER
   user-fetch:
     handler: controllers/user.fetch
     events:
@@ -40,13 +42,31 @@ functions:
           path: user/{user_id}
           method: get
           cors: true
-  user-update:
-    handler: controllers/user.update
+          authorizer: user-authorizer
+  user-fetch_query:
+    handler: controllers/user.fetchQuery
     events:
       - http:
-          path: user/{user_id}
+          path: user
+          method: get
+          cors: true
+          authorizer: user-authorizer
+  user-update:
+    handler: controllers/update.update
+    events:
+      - http:
+          path: user
           method: put
           cors: true
+          authorizer: user-authorizer
+  user-update-profile_img:
+    handler: services/user/controllers/update.profileImg
+    events:
+      - http:
+          path: user/profile_img
+          method: put
+          cors: true
+          authorizer: user-authorizer
   user-validate:
     handler: controllers/user.validate
     events:
@@ -54,5 +74,19 @@ functions:
           path: user/{user_id}/validate
           method: post
           cors: true
+          authorizer: user-authorizer
+  user-authorizer:
+    name: user-authorizer
+    handler: lib/controllers/authorizer.defaultAuthorizer
+
 package:
   excludeDevDependencies: false
+
+resources:
+  Resources:
+    S3BucketPhotos:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: holdr-${self:provider.stage}-user-photos
+        # BucketName: ${self:provider.stage}_photos
+        # add additional custom bucket configuration here

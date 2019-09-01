@@ -1,9 +1,10 @@
-const Joi = require("joi");
-const { parseAndValidate } = require("../lib/handlers/bodyParser");
-const { User } = require("../lib/models/user");
-const { SilaWallet } = require("../lib/models/wallet");
-const bankController = require("../lib/controllers/sila");
-const SNS = require("../lib/handlers/sns");
+import { HttpResponse } from "../lib/models/httpResponse";
+import * as bankController from "../lib/controllers/sila";
+import { SilaWallet } from "../lib/models/wallet";
+import * as Joi from "joi";
+import { parseAndValidate } from "../lib/handlers/bodyParser";
+import { User } from "../lib/models/user";
+import * as SNS from "../lib/handlers/sns";
 
 // POST Body format validator
 const schema = Joi.object().keys({
@@ -20,19 +21,18 @@ const schema = Joi.object().keys({
 // Accepts the KYC information from the user.
 // If the user exists, and does not have any active account,
 // then we use the bank shem
-async function create(event) {
-  const response = { statusCode: 400, body: "" };
+async function create({
+  body: bodyUnvalidated,
+  requestContext: {
+    authorizer: { principalId: userId }
+  }
+}) {
   try {
-    console.log("Event: ", event);
-
     // Parse and validate payload
-    const body = parseAndValidate(event.body, schema);
-
-    // Fetch user_id
-    const userId = event["pathParameters"]["user_id"];
+    const body = parseAndValidate(bodyUnvalidated, schema);
 
     // Fetch the user from the database
-    const user = await User.query().findById(userId);
+    const user: any = await User.query().findById(userId);
     console.log(user);
 
     // Fetch the user's wallet info from the database
@@ -70,36 +70,46 @@ async function create(event) {
     );
     console.log("SNS Result: ", res);
 
-    // Build response
-    response.statusCode = 200;
-    response.body = JSON.stringify({ message: "Successfully Registered" });
+    // Remove the user from the serial list
+    return new HttpResponse(200, "success");
   } catch (err) {
     console.log("Error: ", err);
-    response.body = JSON.stringify({ message: err.message });
+    return new HttpResponse(200, err.message);
   }
-  return response;
 }
 
-async function fetch(event) {
-  const response = { statusCode: 400, body: "" };
+/**
+ * Fetch and return
+ *     "handle",
+ *     "account_type",
+ *     "active_balance",
+ *     "pending_balance",
+ *     "kyc_state",
+ *     "bank_linked"
+ *
+ * @param {*} { pathParameters: { user_id: userId } }
+ * @returns
+ */
+async function fetch({ pathParameters: { user_id: userId } }) {
   try {
-    console.log("Event: ", event);
-
-    // Fetch user_id
-    const userId = event["pathParameters"]["user_id"];
-
     // Check to make sure that a SILA account has been linked already
-    const [wallet] = await SilaWallet.getWallet(userId);
+    const wallet: any = await SilaWallet.getWallet(userId, [
+      "handle",
+      "account_type",
+      "active_balance",
+      "pending_balance",
+      "kyc_state",
+      "bank_linked"
+    ]);
     if (!wallet) {
       throw Error("No wallet for user");
     }
-    response.body = JSON.stringify({ handle: wallet.handle });
-    response.statusCode = 200;
-    return response;
+
+    return new HttpResponse(200, "success", wallet);
   } catch (err) {
     console.log("Wallet error: ", err);
+    return new HttpResponse(404, err.message);
   }
-  return response;
 }
 
 export { create, fetch };

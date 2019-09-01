@@ -31,10 +31,6 @@ functions:
     handler: controllers/issue.issueFunds
     events:
       - schedule: rate(2 minutes)
-  transfer-issue_update:
-    handler: controllers/issue.checkIssued
-    events:
-      - schedule: rate(2 minutes)
   transfer-fbo_transfer:
     handler: controllers/transferFbo.fundFbo
     events:

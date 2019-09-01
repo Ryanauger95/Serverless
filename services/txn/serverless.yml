@@ -11,6 +11,9 @@ package:
   exclude:
     - lib/node_modules/**
 
+plugins:
+  - serverless-offline
+
 provider:
   name: aws
   runtime: nodejs10.x
@@ -30,6 +33,7 @@ functions:
           path: txn
           method: post
           cors: true
+          authorizer: txn-authorizer
   txn-fetch:
     handler: controllers/retreive.retreive
     events:
@@ -37,6 +41,15 @@ functions:
           path: txn/{txn_id}
           method: get
           cors: true
+          authorizer: txn-authorizer
+  txn-fetch_all:
+    handler: controllers/retreive.allForUser
+    events:
+      - http:
+          path: txn
+          method: get
+          cors: true
+          authorizer: txn-authorizer
   txn-update:
     handler: controllers/update.update
     events:
@@ -44,6 +57,10 @@ functions:
           path: txn/{txn_id}
           method: put
           cors: true
+          authorizer: txn-authorizer
+  txn-authorizer:
+    name: txn-authorizer
+    handler: lib/controllers/authorizer.defaultAuthorizer
           # authorizer:
           #   name: esgro-users-authorizer
           #   arn: arn:aws:cognito-idp:us-east-1:532299806817:userpool/us-east-1_289MZHUoN

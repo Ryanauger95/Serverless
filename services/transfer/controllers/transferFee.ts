@@ -1,10 +1,13 @@
 import { fetchTransactions } from "./common";
 import { totalTxn } from "../lib/controllers/ledger";
-import { FUND_STATE, DEAL_STATE, Txn } from "../lib/models/txn";
-import * as bankController from "../lib/controllers/sila";
-import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
+import { FUND_STATE, DEAL_STATE, TxnController } from "../lib/controllers/txn";
+import { LEDGER_TYPE } from "../lib/models/ledger";
 import * as funds from "../lib/controllers/funds";
 
+/**
+ * Fund the fee collector account
+ *
+ */
 async function fundFee() {
   const txns = await fetchTransactions(
     FUND_STATE.TO_FBO_TRANSFER_COMPLETE,
@@ -14,23 +17,19 @@ async function fundFee() {
 
   for (var i = 0; i < txns.length; i++) {
     const txn: any = txns[i].toJSON();
-    console.log("Txn: ", txn);
+    console.log("TxnController: ", txn);
 
     // Total the txn's balance information
     const totals = await totalTxn(txn.id);
     console.log("Totals: ", totals);
     const fboActiveBalance = totals.fbo.completed;
-    const fundingRemaining = txn.total - fboActiveBalance;
+    const fundingRemaining = txn.payerTotal - fboActiveBalance;
     const feeRemaining =
       txn.totalFee - (totals.fee.completed + totals.fee.pending);
 
     console.log(`feeRemaining: `, feeRemaining);
 
-    if (fundingRemaining > 0) {
-      console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_COMPLETE -> ISSUE_COMPLETE`);
-      await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
-      throw Error("Not fully funded!");
-    } else if (feeRemaining >= 0) {
+    if (feeRemaining >= 0) {
       // Fund the amount remaining
       const fboHandle = txn.fbo_handle;
       const feeHandle = txn.fee_handle;
@@ -46,21 +45,35 @@ async function fundFee() {
         FUND_STATE.FEE_PENDING
       );
     } else {
-      throw Error("Error");
+      if (fundingRemaining > 0) {
+        console.log(
+          `TXN(${txn.id}) TO_FBO_TRANSFER_COMPLETE -> ISSUE_COMPLETE`
+        );
+        await TxnController.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
+        throw Error("Transaction is not funded properly!");
+      } else {
+        throw Error("Fee Error! ");
+      }
     }
   }
 }
 
+/**
+ * Check the accounts in the FEE_PENDING state. If they
+ * are done funding, then move up. If fees pending, dont move.
+ * If funds insufficient, throw error and move back
+ *
+ */
 async function checkFundFee() {
-  // Fetch all Txn's that are ready for FBO transfers
+  // Fetch all TxnController's that are ready for FBO transfers
   const txns = await fetchTransactions(
     FUND_STATE.FEE_PENDING,
     DEAL_STATE.PROGRESS
   );
-  console.log(`#Txns: ${txns.length}`);
+  console.log(`#TxnControllers: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
     const txn: any = txns[i].toJSON();
-    console.log("Txn: ", txn);
+    console.log("TxnController: ", txn);
 
     // Total the txn's balance information
     const totals = await totalTxn(txn.id);
@@ -69,18 +82,22 @@ async function checkFundFee() {
     const feePendingBalance = totals.fee.pending;
     const feeEffectiveBalance = feeActiveBalance + feePendingBalance;
 
-    if (feeActiveBalance >= txn.totalFee) {
+    if (feeActiveBalance === txn.totalFee) {
       console.log(
         `TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
       );
-      await Txn.updateFundState(txn.id, FUND_STATE.FEE_COMPLETE);
-    } else if (feeEffectiveBalance >= txn.totalFee) {
+      await TxnController.updateFundState(txn.id, FUND_STATE.FEE_COMPLETE);
+    } else if (feeEffectiveBalance === txn.totalFee) {
       console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING UNCHANGED`);
     } else {
       console.log(
-        `TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
+        `TXN(${txn.id}) TO_FEE_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
       );
-      await Txn.updateFundState(txn.id, FUND_STATE.TO_FBO_TRANSFER_COMPLETE);
+      await TxnController.updateFundState(
+        txn.id,
+        FUND_STATE.TO_FBO_TRANSFER_COMPLETE
+      );
+      throw Error("Incorrect Funding amount!!");
     }
   }
 }

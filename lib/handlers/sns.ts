@@ -14,4 +14,4 @@ function publish(Topic, Message) {
   return new AWS.SNS({ apiVersion: "2010-03-31" }).publish(params).promise();
 }
 
-module.exports.publish = publish;
+export { publish };

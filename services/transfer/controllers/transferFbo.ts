@@ -1,19 +1,23 @@
-import { Txn, FUND_STATE, DEAL_STATE } from "../lib/models/txn";
+import { TxnController, FUND_STATE, DEAL_STATE } from "../lib/controllers/txn";
 import { LEDGER_TYPE } from "../lib/models/ledger";
 import * as bankController from "../lib/controllers/sila";
 import { totalTxn } from "../lib/controllers/ledger";
-import { fetchTransactions } from "./common";
+import { fetchTransactions, fetchTransactionWalletInfo } from "./common";
 import * as funds from "../lib/controllers/funds";
 
 async function fundFbo() {
   // Fetch all Txn's that are ready for FBO transfers
   const txns = await fetchTransactions(
-    FUND_STATE.ISSUE_COMPLETE,
+    FUND_STATE.ISSUE_PENDING,
     DEAL_STATE.PROGRESS
   );
   console.log(`#Txns: ${txns.length}`);
   for (var i = 0; i < txns.length; i++) {
-    const txn: any = txns[i].toJSON();
+    const txnUnupdated: any = txns[i].toJSON();
+    const txn: any = (await fetchTransactionWalletInfo(
+      txnUnupdated.id
+    )).toJSON();
+
     console.log("Txn: ", txn);
 
     // Total the txn's balance information
@@ -22,29 +26,31 @@ async function fundFbo() {
     const fboActiveBalance = totals.fbo.completed;
     const fboPendingBalance = totals.fbo.pending;
     const fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-    const amountRemaining = txn.total - fboEffectiveBalance;
+    const amountRemaining = txn.payerTotal - fboEffectiveBalance;
 
     // Total the payer's balance information
     const payerActiveBalance = txn.payer_active_balance;
+    const payerEffectiveBalance =
+      txn.payer_active_balance + txn.payer_pending_balance;
 
     // Find how much the txn needs
-    console.log(`TXN(${txn.id}) FBO requires $${amountRemaining}`);
+    console.log(
+      `TXN(${
+        txn.id
+      }) FBO requires $${amountRemaining}, payerActiveBalance: ${payerActiveBalance}`
+    );
 
-    // Already funded -- recover from error
     if (amountRemaining === 0) {
+      // Already funded -- recover from error
       console.log(`TXN(${txn.id}) already funded!`);
-      await Txn.updateFundState(txn.id, FUND_STATE.TO_FBO_TRANSFER_COMPLETE);
-    }
-    // OVerfunded -- Throw major error
-    else if (amountRemaining < 0) {
-      // Do something
-      throw Error("Overfunded!");
-    }
-    // User Acct Balance not enough -- Not Funded
-    else if (amountRemaining > payerActiveBalance) {
-      console.log(`TXN(${txn.id}) ISSUE_COMPLETE -> NOT_FUNDED`);
-      await Txn.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
-    } else {
+      await TxnController.updateFundState(
+        txn.id,
+        FUND_STATE.TO_FBO_TRANSFER_COMPLETE
+      );
+    } else if (
+      payerActiveBalance >= amountRemaining &&
+      payerEffectiveBalance >= amountRemaining
+    ) {
       // Transfer $
       // Fund the amount remaining
       const fboHandle = bankController.fboHandle;
@@ -56,6 +62,13 @@ async function fundFbo() {
         txn.id,
         FUND_STATE.TO_FBO_TRANSFER_PENDING
       );
+    } else if (payerEffectiveBalance >= amountRemaining) {
+      //Waiting for pending transfers to come through
+      console.log(`TXN(${txn.id}) waiting on funding`);
+    } else {
+      // Throw major error. Either overfunded or underfunded
+      console.log(`TXN(${txn.id}) MAJOR funding error`);
+      await TxnController.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
     }
   }
 }
@@ -77,21 +90,20 @@ async function checkFundFbo() {
     const fboActiveBalance = totals.fbo.completed;
     const fboPendingBalance = totals.fbo.pending;
     const fboEffectiveBalance = fboActiveBalance + fboPendingBalance;
-    const amountRemaining = txn.total - fboEffectiveBalance;
 
-    // Total the payer's balance information
-    const payerActiveBalance = txn.payer_active_balance;
-
-    if (fboActiveBalance >= txn.total) {
+    if (fboActiveBalance >= txn.payerTotal) {
       console.log(
         `TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> TO_FBO_TRANSFER_COMPLETE`
       );
-      await Txn.updateFundState(txn.id, FUND_STATE.TO_FBO_TRANSFER_COMPLETE);
-    } else if (fboEffectiveBalance >= txn.total) {
+      await TxnController.updateFundState(
+        txn.id,
+        FUND_STATE.TO_FBO_TRANSFER_COMPLETE
+      );
+    } else if (fboEffectiveBalance >= txn.payerTotal) {
       console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING UNCHANGED`);
     } else {
-      console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> ISSUE_COMPLETE`);
-      await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
+      console.log(`TXN(${txn.id}) TO_FBO_TRANSFER_PENDING -> NOT_FUNDED`);
+      await TxnController.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
     }
   }
 }

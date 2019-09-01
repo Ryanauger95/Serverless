@@ -57,10 +57,10 @@ class SilaWallet extends Model {
       await trx(silaTableName).insert(data);
     });
   }
-  static getWallet(userId) {
+  static getWallet(userId, info) {
     return SilaWallet.query()
-      .select("*")
-      .where({ active: true, app_users_id: userId });
+      .select(info)
+      .findOne({ active: true, app_users_id: userId });
   }
 
   static getActiveWallets(userId) {

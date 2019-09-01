@@ -1,4 +1,4 @@
-import { Txn, DEAL_STATE } from "../lib/models/txn";
+import { TxnController, DEAL_STATE } from "../lib/controllers/txn";
 import * as Joi from "joi";
 import { parseAndValidate } from "../lib/handlers/bodyParser";
 import { HttpResponse } from "../lib/models/httpResponse";
@@ -6,9 +6,6 @@ import { HttpResponse } from "../lib/models/httpResponse";
 // POST Body format validator
 const schema = Joi.object()
   .keys({
-    user_id: Joi.number()
-      .integer()
-      .required(),
     state_change: Joi.boolean().required(),
     new_state: Joi.string()
       .allow("")
@@ -33,39 +30,43 @@ const schema = Joi.object()
  */
 async function update({
   body: bodyUnvalidated,
-  pathParameters: { txn_id: txnId }
+  pathParameters: { txn_id: txnId },
+  requestContext: {
+    authorizer: { principalId: principalId }
+  }
 }) {
   console.log("TXNID: ", txnId);
 
   try {
     // Parse and validate POST body
     const body = parseAndValidate(bodyUnvalidated, schema);
-    console.log(bodyUnvalidated);
-    const userId = body.user_id;
+    console.log("Body: ", body);
 
     //
-    const txn: any = await Txn.query().findById(txnId);
+    const txnNonJSON: any = await TxnController.query().findById(txnId);
+    const txn = txnNonJSON.toJSON();
+    console.log(`Attempting update state to: ${body.new_state}`);
     if (
       body.state_change === true &&
       Object.values(DEAL_STATE).includes(body.new_state) &&
-      (userId === txn.payer_id || userId === txn.collector_id)
+      (principalId === txn.payer_id || principalId === txn.collector_id)
     ) {
-      if (txn.deal_state === DEAL_STATE.PROGRESS) {
-        await progressStateChange(txn, userId, body.new_state);
-        console.log(`Txn state updated to ${body.new_state}`);
+      if (txn.deal_state === DEAL_STATE.PENDING) {
+        await pendingStateChange(txn, principalId, body.new_state);
+      } else if (txn.deal_state === DEAL_STATE.PROGRESS) {
+        await progressStateChange(txn, principalId, body.new_state);
       } else if (txn.deal_state === DEAL_STATE.REVIEW) {
         await reviewStateChange(
           txn,
-          userId,
+          principalId,
           body.new_state,
           body.dispute_payer_amount,
           body.dispute_collector_amount
         );
-        console.log(`Txn state updated to ${body.new_state}`);
       } else if (txn.deal_state === DEAL_STATE.DISPUTE) {
         await disputeStateChange(
           txn,
-          userId,
+          principalId,
           body.new_state,
           body.dispute_payer_amount,
           body.dispute_collector_amount
@@ -75,20 +76,20 @@ async function update({
       }
     } else {
       console.log(
-        "TxnId: ",
+        "TxnControllerId: ",
         txnId,
         "UserId: ",
-        userId,
+        principalId,
         " Body: ",
         body,
-        " Txn:",
+        " TxnController:",
         txn
       );
       throw Error("Error changing updating state");
     }
-    return new HttpResponse(200).dump();
+    return new HttpResponse(200);
   } catch (err) {
-    return new HttpResponse(500, err.message).dump();
+    return new HttpResponse(500, err.message);
   }
 }
 
@@ -111,7 +112,7 @@ async function disputeStateChange(
 ) {
   if (userId === txn.dispute_reply_id) {
     if (newState === DEAL_STATE.COMPLETE) {
-      await Txn.markComplete(txn.id);
+      await TxnController.markComplete(txn.id);
     } else if (newState === DEAL_STATE.DISPUTE) {
       await handleDisputeUpdate(
         txn,
@@ -149,11 +150,11 @@ async function handleDisputeUpdate(
     disputePayerAmount !== undefined &&
     disputeCollectorAmount !== undefined &&
     disputeCollectorAmount >= txn.reserve &&
-    disputePayerAmount + disputeCollectorAmount === txn.amount
+    disputePayerAmount + disputeCollectorAmount === txn.collectorTotal
   ) {
     const disputeReplyId =
       userId === txn.payer_id ? txn.collector_id : txn.payer_id;
-    await Txn.markDispute(
+    await TxnController.markDispute(
       txn.id,
       disputeReplyId,
       disputePayerAmount,
@@ -161,7 +162,9 @@ async function handleDisputeUpdate(
     );
     // TODO: notify peer
   } else {
-    throw Error("Bad amounts");
+    throw Error(
+      `Bad amounts payer(${disputePayerAmount}) collector(${disputeCollectorAmount}), total: ${txn.collectorTotal}`
+    );
   }
 }
 /**
@@ -182,9 +185,18 @@ async function reviewStateChange(
   disputePayerAmount?: number,
   disputeCollectorAmount?: number
 ) {
+  if (userId !== txn.payer_id) {
+    throw Error("Only the payer can mark complete here!");
+  }
   if (newState === DEAL_STATE.COMPLETE) {
     //Mark as complete
-    await Txn.markComplete(txn.id);
+    const completePayerAmount = 0;
+    const completeCollectorAmount = txn.collectorTotal;
+    await TxnController.markComplete(
+      txn.id,
+      completePayerAmount,
+      completeCollectorAmount
+    );
     //TODO: notify users
   } else if (newState === DEAL_STATE.DISPUTE) {
     //Mark as in dispute and update dispute params
@@ -196,7 +208,7 @@ async function reviewStateChange(
     );
     //TODO: notify
   } else {
-    throw Error("Bad amounts!");
+    throw Error("Bad state!");
   }
 }
 
@@ -221,17 +233,34 @@ async function progressStateChange(
     // Set Canceller id in DB
     // Mark as CANCELED_PENDING_TRANSFER
     const returnReserve = userId === txn.payer_id ? true : false;
-    await Txn.markCancelled(txn.id, userId, returnReserve);
+    await TxnController.markCancelled(txn.id, userId, returnReserve);
     // TODO: Notify Peer
   } else if (newState === DEAL_STATE.REVIEW) {
     if (userId === txn.collector_id) {
-      await Txn.markReview(txn.id);
+      await TxnController.markReview(txn.id);
       // TODO: Notify Peer
     } else {
       throw Error("Payer cannot mark as under review!");
     }
   } else {
     throw Error(`TXN(${txn.id}): Invalid transition to state ${newState}`);
+  }
+}
+
+async function pendingStateChange(txn: any, userId: any, newState: DEAL_STATE) {
+  if (newState === DEAL_STATE.CANCELLED) {
+    // mark as cancelled
+    await TxnController.markCancelled(txn.id, userId, false);
+  } else if (newState === DEAL_STATE.PROGRESS) {
+    if (userId !== txn.originator_id) {
+      // new state is PROGRESS
+      await TxnController.markProgress(txn.id);
+    } else {
+      // this user cannot mark as in progress
+      throw Error("This user cannot mark as in progress!");
+    }
+  } else {
+    throw Error("Invalid State");
   }
 }
 

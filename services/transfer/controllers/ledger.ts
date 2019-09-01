@@ -1,16 +1,14 @@
 import { Ledger, LEDGER_STATE, LEDGER_TYPE } from "../lib/models/ledger";
 import { getTransactions } from "../lib/controllers/sila.js";
 
-/****************************************
- * EXTERNAL FUNCTIONS
- ****************************************/
-
-/****************************************
+/**
  * updateLedgerEntries
  * For each ledger entry that is PENDING,
  * check to see if the state has changed
  * and update the state if it has
- ****************************************/
+ *
+ * @returns
+ */
 async function updateLedgerEntries() {
   console.log("Checking all pending transfers and updating their states...");
 
@@ -29,7 +27,6 @@ async function updateLedgerEntries() {
     // If there is an error, then it is a big error
     var handle: string = handleForType(pendingLedgerEntry);
     const filter = { reference_id: pendingLedgerEntry.reference };
-    console.log("Test");
     const { transactions } = await getTransactions(handle, filter);
     const [transaction] = transactions;
 
@@ -37,8 +34,7 @@ async function updateLedgerEntries() {
       console.log("MASSIVE Error... Transaction not found!");
       return;
     }
-    console.log("Transaction Matched: ", transaction);
-
+    console.log("Transaction: ", transaction);
     // Update the ledger entry state
     const newLedgerState: LEDGER_STATE = transactionStateToLedgerState(
       transaction

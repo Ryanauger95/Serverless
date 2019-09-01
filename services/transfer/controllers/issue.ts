@@ -1,96 +1,122 @@
-import { Txn, FUND_STATE, DEAL_STATE } from "../lib/models/txn";
+import { TxnController, FUND_STATE, DEAL_STATE } from "../lib/controllers/txn";
 import { totalTxn } from "../lib/controllers/ledger";
-import { fetchTransactions } from "./common";
+import {
+  fetchTransactions,
+  fetchTransactionWalletInfo,
+  fetchUnfundedTransactions
+} from "./common";
 import * as funds from "../lib/controllers/funds";
+import { generateKeyPairSync } from "crypto";
 
-// For each transaction that is not funded,
-// if the payer DOES NOT have enough money,
-// then issue funds into their account
+class Issue {
+  payer_id;
+  payer_total;
+}
+
+/**
+ * For each transaction that is NOT_FUNDED or ISSUE_PENDING,
+ * if the payer DOES NOT have enough money,
+ * then issue funds into their account.
+ *
+ */
 async function issueFunds() {
   try {
-    const txns = await fetchTransactions(
-      FUND_STATE.NOT_FUNDED,
-      DEAL_STATE.PROGRESS
-    );
+    const txns: any[] = await fetchUnfundedTransactions();
+
     console.log(`#Txns: ${txns.length}`);
 
-    for (var i = 0; i < txns.length; i++) {
-      // const txn: any = txns[i];
-      const txn: any = txns[i].toJSON();
+    const txnTable = await buildTxnTable(txns);
+    Object.keys(txnTable).forEach(async function(idStr) {
+      const id = Number(idStr);
+      const payerInfo = txnTable[id];
       const payerEffectiveBalance =
-        txn.payer_active_balance + txn.payer_pending_balance;
+        payerInfo.payer_active_balance + payerInfo.payer_pending_balance;
 
-      // Total the txn's balance information
-      const totals = await totalTxn(txn.id);
-      console.log("Totals: ", totals);
-      const fboEffectiveBalance = totals.fbo.completed + totals.fbo.pending;
-      const amountRemaining = txn.total - fboEffectiveBalance;
-      const fundsRequired = amountRemaining - payerEffectiveBalance;
+      const amountRemaining = payerInfo.payer_total - payerEffectiveBalance;
 
-      // If the user has enough in their account, we
-      // mark the txn as ISSUE_COMPLETE
-      if (txn.payer_active_balance >= amountRemaining) {
-        console.log(`TXN(${txn.id}) NOT_FUNDED -> ISSUE_COMPLETE`);
-        await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
-      }
-      // If the user will have enough in their account,
-      // then mark as issue pending
-      else if (payerEffectiveBalance >= amountRemaining) {
-        console.log(`TXN(${txn.id}) NOT_FUNDED -> ISSUE_PENDING`);
-        await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_PENDING);
-      } else if (fundsRequired > 0) {
-        //
-        console.log(`TXN(${txn.id}) issuing ${fundsRequired}`);
-        await funds.issue(
-          txn.payer_handle,
-          fundsRequired,
-          txn.id,
-          FUND_STATE.ISSUE_PENDING
-        );
-      }
-    }
-  } catch (err) {
-    console.log("Error: ", err);
-  }
-}
-// For each transaction that is ISSUE_PENDING,
-// check the user balance and if the active balance
-// is sufficient, move to ISSUE_COMPLETE
-async function checkIssued() {
-  try {
-    const txns = await fetchTransactions(
-      FUND_STATE.ISSUE_PENDING,
-      DEAL_STATE.PROGRESS
-    );
+      // Really, the amount remaining isn't the total owed by the
+      // payer - effective balance
+      // it is
+      // (total_owed_payer - total_fbo_completed) - payer_effective_balance
 
-    for (var i = 0; i < txns.length; i++) {
-      const txn: any = txns[i].toJSON();
-      const payerEffectiveBalance =
-        txn.payer_active_balance + txn.payer_pending_balance;
       console.log(
-        `Payer effective balance: ${payerEffectiveBalance} Total: ${txn.total}`
+        "payerInfo: ",
+        id,
+        " payerInfo: ",
+        payerInfo,
+        " amountRemaining: ",
+        amountRemaining
       );
 
-      // If the user has enough in their account, we
-      // mark the txn as ISSUE_COMPLETE
-      if (txn.payer_active_balance >= txn.total) {
-        console.log(`TXN(${txn.id}) ISSUE_PENDING -> ISSUE_COMPLETE`);
-        await Txn.updateFundState(txn.id, FUND_STATE.ISSUE_COMPLETE);
+      if (amountRemaining < 0) {
+        throw Error(
+          `MAJOR ERROR, NOT FUNDED BUT amountRemaining(${amountRemaining})`
+        );
       }
-      // If the user will have enough in their account,
-      // then mark as issue pending
-      else if (payerEffectiveBalance >= txn.total) {
-        console.log(`TXN(${txn.id}) ISSUE_PENDING UNCHANGED`);
+      // Fund the payer amountRemaining
+      if (amountRemaining > 0) {
+        await funds.issue(payerInfo.payer_handle, amountRemaining, null);
       }
-      // Mark the txn as NOT_FUNDED
-      else {
-        console.log(`TXN(${txn.id}) ISSUE_PENDING -> NOT_FUNDED`);
-        await Txn.updateFundState(txn.id, FUND_STATE.NOT_FUNDED);
+
+      // mark all txns as ISSUE_PENDING
+      // if they are not already
+      for (var i = 0; i < payerInfo.txn_info.length; i++) {
+        const txnInfo = payerInfo.txn_info[i];
+        await markIssuePendingIfNot(txnInfo);
       }
-    }
+    });
   } catch (err) {
     console.log("Error: ", err);
   }
 }
 
-export { issueFunds, checkIssued };
+/**
+ * Marks txns as issue pending if they are not already
+ *
+ * @param {*} txnInfo
+ */
+async function markIssuePendingIfNot(txnInfo) {
+  if (txnInfo.fund_state !== FUND_STATE.ISSUE_PENDING) {
+    await TxnController.updateFundState(
+      txnInfo.txn_id,
+      FUND_STATE.ISSUE_PENDING
+    );
+  }
+}
+
+/**
+ * Takes in an array of TxnControllers.
+ * Builds an object representing the total amount
+ * owed by each payer, and his/her balances.
+ *
+ * @param {TxnController[]} txns
+ * @returns
+ */
+async function buildTxnTable(txns: TxnController[]) {
+  // Sort by payer.id, and then for each payer total the amounts
+  // needed and issue those amounts in increments
+  const obj = {};
+  for (var i = 0; i < txns.length; i++) {
+    const txn: any = txns[i].toJSON();
+    const totals = await totalTxn(txn.id);
+    var payerTotal = 0;
+    var txnInfo = [
+      { txn_id: txn.id, deal_state: txn.deal_state, fund_state: txn.fund_state }
+    ];
+    if (obj[txn.payer_id]) {
+      payerTotal += obj[txn.payer_id].payer_total;
+      txnInfo = txnInfo.concat(obj[txn.payer_id]["txn_info"]);
+    }
+    payerTotal += txn.payerTotal - totals.fbo.completed - totals.fbo.pending;
+    obj[txn.payer_id] = {
+      payer_handle: txn.payer_handle,
+      txn_info: txnInfo,
+      payer_total: payerTotal,
+      payer_active_balance: txn.payer_active_balance,
+      payer_pending_balance: txn.payer_pending_balance
+    };
+  }
+  return obj;
+}
+
+export { issueFunds };

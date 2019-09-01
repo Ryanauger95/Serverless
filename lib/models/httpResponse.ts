@@ -6,10 +6,10 @@
  *
  * @class HttpResponse
  */
+
 class HttpResponse {
   statusCode: number = 500;
-  message: string = "";
-  data: object = {};
+  body: string = "";
 
   /**
    *Creates an instance of HttpResponse.
@@ -24,23 +24,9 @@ class HttpResponse {
     data: object = {}
   ) {
     this.statusCode = statusCode;
-    this.message = message;
-    this.data = data;
-  }
-
-  /**
-   * Dumps a JSON string
-   *
-   * @returns
-   * @memberof HttpResponse
-   */
-  dump() {
-    return JSON.stringify({
-      statusCode: this.statusCode,
-      body: {
-        message: this.message,
-        data: this.data
-      }
+    this.body = JSON.stringify({
+      message: message,
+      data: data
     });
   }
 }

@@ -1,5 +1,5 @@
 import { sila, fboHandle } from "../handlers/sila";
-import { SilaWallet, KYC_STATE } from "../models/wallet";
+import { SilaWallet, KYC_STATE, ACCOUNT_TYPE } from "../models/wallet";
 
 async function register(id, info) {
   // Generate handle
@@ -39,7 +39,8 @@ async function register(id, info) {
       handle: handle,
       private_key: wallet.privateKey,
       active: 1,
-      kyc_state: KYC_STATE["PENDING"],
+      kyc_state: KYC_STATE.PENDING,
+      account_type: ACCOUNT_TYPE.USER,
       app_users_id: id
     },
     true

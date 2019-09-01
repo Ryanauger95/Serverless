@@ -26,16 +26,16 @@ function sendMessage(message, receiver) {
  *    Verification Sms Templates
  */
 function verificationSms(pin) {
-  return `Use Pin: ${pin} to verify Esgro Account.`;
+  return `Use Pin: ${pin} to verify Pay-Lance Account.`;
 }
 
 /*
  *    Forgot password pin Sms Templates
  */
 function forgotPwdSms(pin) {
-  return `Use Pin: ${pin} to Confirm the Esgro App password reset request. \
+  return `Use Pin: ${pin} to Confirm the Pay-Lance App password reset request. \
   This pin is valid for only 5 minutes.\
-  If you didn't request this, Please contact the Esgro Customer Support`;
+  If you didn't request this, Please contact the Pay-Lance Customer Support`;
 }
 
 export { sendMessage, verificationSms, forgotPwdSms };

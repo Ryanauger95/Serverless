@@ -1,5 +1,5 @@
 import { Ledger, LEDGER_TYPE, LEDGER_STATE } from "../models/ledger";
-import { FUND_STATE, Txn } from "../models/txn";
+import { FUND_STATE, TxnController } from "../controllers/txn";
 import * as bankController from "./sila";
 
 /**
@@ -89,7 +89,7 @@ async function insertLedger(
       txnId
     );
     if (Object.values(FUND_STATE).includes(newFundState)) {
-      await Txn.updateFundState(txnId, newFundState, trx);
+      await TxnController.updateFundState(txnId, newFundState, trx);
     }
     trx.commit();
   } catch (err) {
