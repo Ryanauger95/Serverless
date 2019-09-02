@@ -35,9 +35,7 @@ async function fundFbo() {
 
     // Find how much the txn needs
     console.log(
-      `TXN(${
-        txn.id
-      }) FBO requires $${amountRemaining}, payerActiveBalance: ${payerActiveBalance}`
+      `TXN(${txn.id}) FBO requires $${amountRemaining}, payerActiveBalance: ${payerActiveBalance}, payerEffectiveBalance: ${payerEffectiveBalance}`
     );
 
     if (amountRemaining === 0) {

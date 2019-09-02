@@ -40,7 +40,7 @@ async function issueFunds() {
       // (total_owed_payer - total_fbo_completed) - payer_effective_balance
 
       console.log(
-        "payerInfo: ",
+        "payerId: ",
         id,
         " payerInfo: ",
         payerInfo,

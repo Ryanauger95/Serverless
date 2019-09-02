@@ -1,17 +1,24 @@
 import { AWS } from "./aws";
 
-const ARNList = Object.freeze({
-  "user-registered": process.env.AWS_USER_REGISTERED_TOPIC_ARN,
-  "user-wallet-registered": process.env.AWS_USER_WALLET_REGISTERED_TOPIC_ARN,
-  "user-wallet-kyc_changed": process.env.AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN
+var sns = new AWS.SNS({
+  apiVersion: "2010-03-31",
+  endpoint: process.env.AWS_ENDPOINT
 });
 
-function publish(Topic, Message) {
+const SNS_TOPIC = Object.freeze({
+  USER_REGISTERED: process.env.AWS_USER_REGISTERED_TOPIC_ARN,
+  USER_WALLET_REGISTERED: process.env.AWS_USER_WALLET_REGISTERED_TOPIC_ARN,
+  USER_WALLET_KYC_CHANGED: process.env.AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN,
+  LEDGER_ADDED: process.env.AWS_LEDGER_ADDED_TOPIC_ARN
+});
+
+function publish(Topic: string, Message: string) {
   const params = {
     Message: Message,
-    TopicArn: ARNList[Topic]
+    TopicArn: Topic
   };
-  return new AWS.SNS({ apiVersion: "2010-03-31" }).publish(params).promise();
+  console.log("params: ", params);
+  return sns.publish(params).promise();
 }
 
-export { publish };
+export { SNS_TOPIC, publish };

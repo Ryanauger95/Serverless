@@ -1,6 +1,6 @@
 // Import DB Connection
 // const {Model, knex} = require('../handlers/mysql');
-import { Model, knex } from "../handlers/mysql";
+import { BaseModel, knex } from "../handlers/mysql";
 
 enum KYC_STATE {
   UNKNOWN = "UNKNOWN",
@@ -17,7 +17,7 @@ enum ACCOUNT_TYPE {
 }
 
 const silaTableName: string = "sila_wallet";
-class SilaWallet extends Model {
+class SilaWallet extends BaseModel {
   // The insert function simply requires that
   // we first insure that no other entry
   // has app_users_id & active = 1
@@ -29,7 +29,7 @@ class SilaWallet extends Model {
     const { User } = require("./user");
     return {
       user: {
-        relation: Model.BelongsToOneRelation,
+        relation: BaseModel.BelongsToOneRelation,
         modelClass: User,
         join: {
           from: "sila_wallet.app_users_id",

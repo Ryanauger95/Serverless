@@ -1,0 +1,32 @@
+service: bank-proxy
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+package:
+  exclude:
+    - lib/node_modules/**
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: us-east-1
+  environment:
+    AWS_MYSQL_HOST: ${env:AWS_MYSQL_HOST}
+    AWS_MYSQL_USERNAME: ${env:AWS_MYSQL_USERNAME}
+    AWS_MYSQL_DBNAME: ${env:AWS_MYSQL_DBNAME}
+    AWS_MYSQL_PASSWORD: ${env:AWS_MYSQL_PASSWORD}
+    AWS_KEY: ${env:AWS_KEY}
+    AWS_SECRET: ${env:AWS_SECRET}
+    AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
+    AWS_LEDGER_ADDED_TOPIC_ARN: ${env:AWS_LEDGER_ADDED_TOPIC_ARN}
+
+
+functions:
+  ledger-update_entries:
+    handler: controllers/ledger.update
+    events:
+      - schedule: rate(2 minutes)
+  ledger-execute:
+    handler: controllers/ledger.execute
+    events:
+      - schedule: rate(2 minutes)

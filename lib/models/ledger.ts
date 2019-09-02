@@ -110,11 +110,11 @@ class Ledger extends BaseModel {
     amount,
     state,
     txnId
-  ) {
+  ): Promise<any> {
     if (state !== LEDGER_STATE.PENDING) {
       throw Error("Cannot insert a non-pending Txn");
     }
-    await Ledger.query(trx).insert({
+    const ledger = await Ledger.query(trx).insert({
       to_handle: toHandle,
       from_handle: fromHandle,
       reference: reference,
@@ -132,6 +132,7 @@ class Ledger extends BaseModel {
       amount,
       state
     );
+    return ledger;
   }
 
   static async updateWalletBalances(
@@ -146,9 +147,10 @@ class Ledger extends BaseModel {
     // NOTE: If completed, we do not have to modify pending
     //  because the transaction does not already exist as pending
     // and the reference # is unique
-    // const patchJSON = {
 
-    // };
+    // If we are changing to state PENDING, then we do not update the
+    // balance, because the balance is already updated when
+
     const patch: any[] = [];
     switch (type) {
       // Takes ACH transfer, converts to sila token
@@ -281,36 +283,14 @@ class Ledger extends BaseModel {
    *
    * @static
    * @param {*} id
-   * @param {*} toHandle
-   * @param {*} fromHandle
-   * @param {*} reference
-   * @param {*} type
-   * @param {*} amount
    * @param {*} state
    * @memberof Ledger
    */
-  static async updateLedgerAndBalance(
-    id,
-    toHandle,
-    fromHandle,
-    reference,
-    type,
-    amount,
-    state
-  ) {
+  static async updateLedgerAndBalance(id, state) {
     var trx;
     try {
       trx = await Ledger.transaction.start(Ledger.knex());
-      await this.updateLedgerAndBalanceTrx(
-        trx,
-        id,
-        toHandle,
-        fromHandle,
-        reference,
-        type,
-        amount,
-        state
-      );
+      await this.updateLedgerAndBalanceTrx(trx, id, state);
       trx.commit();
     } catch (err) {
       trx.rollback();
@@ -323,25 +303,13 @@ class Ledger extends BaseModel {
    * @static
    * @param {*} trx
    * @param {*} id
-   * @param {*} toHandle
-   * @param {*} fromHandle
-   * @param {*} reference
-   * @param {*} type
-   * @param {*} amount
    * @param {*} state
    * @memberof Ledger
    */
-  static async updateLedgerAndBalanceTrx(
-    trx,
-    id,
-    toHandle,
-    fromHandle,
-    reference,
-    type,
-    amount,
-    state
-  ) {
-    const oldLedgerEntry: any = await Ledger.query(trx).findById(id);
+  static async updateLedgerAndBalanceTrx(trx, id, state) {
+    const oldLedgerEntry: any = await Ledger.query(trx)
+      .findById(id)
+      .forUpdate(); // Locking Txn
     const oldState = oldLedgerEntry.state;
 
     // If the states haven't actually changed, throw a big error
@@ -359,22 +327,14 @@ class Ledger extends BaseModel {
 
     // State Change validated.
     // Update the ledger
-    await this.updateEntryState(
-      trx,
-      id,
-      toHandle,
-      fromHandle,
-      reference,
-      type,
-      state
-    );
+    await this.updateEntryState(trx, id, state);
 
     await this.updateWalletBalances(
       trx,
-      fromHandle,
-      toHandle,
-      type,
-      amount,
+      oldLedgerEntry.from_handle,
+      oldLedgerEntry.to_handle,
+      oldLedgerEntry.type,
+      oldLedgerEntry.amount,
       state
     );
   }
@@ -395,31 +355,15 @@ class Ledger extends BaseModel {
    * @param {*} state
    * @memberof Ledger
    */
-  static async updateEntryState(
-    trx,
-    id,
-    toHandle,
-    fromHandle,
-    reference,
-    type,
-    state
-  ) {
+  static async updateEntryState(trx, id, state) {
     // Update a ledger entry.
-    console.log(
-      `UPDATE:id=${id},reference=${reference},type=${type},state=${state},toHandle=${toHandle},fromHandle=${fromHandle}`
-    );
+    console.log(`UPDATE:id=${id},state=${state}`);
     const res = await Ledger.query(trx)
+      .findById(id)
       .update({
         state: state,
         update_date: new Date()
       } as any)
-      .where({
-        id: id,
-        reference: reference,
-        type: type,
-        from_handle: fromHandle,
-        to_handle: toHandle
-      })
       .andWhere("state", "!=", state);
     if (res === 0) {
       throw Error("update failed!");

@@ -1,3 +1,5 @@
+org: ryanauger95
+app: transfer
 service: transfer
 frameworkVersion: ">=1.1.0 <2.0.0"
 
@@ -21,12 +23,9 @@ provider:
     AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
     AWS_USER_WALLET_REGISTERED_TOPIC_ARN: ${env:AWS_USER_WALLET_REGISTERED_TOPIC_ARN}
     AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN: ${env:AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN}
+    AWS_LEDGER_ADDED_TOPIC_ARN: ${env:AWS_LEDGER_ADDED_TOPIC_ARN}
 
 functions:
-  transfer-ledger-update_entries:
-    handler: controllers/ledger.updateLedgerEntries
-    events:
-      - schedule: rate(2 minutes)
   transfer-issue_funds:
     handler: controllers/issue.issueFunds
     events:

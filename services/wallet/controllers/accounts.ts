@@ -1,82 +1,100 @@
-const Joi = require("joi");
-const { SilaWallet } = require("../lib/models/wallet");
-const bankController = require("../lib/controllers/sila");
-const { parseAndValidate } = require("../lib/handlers/bodyParser");
+import { HttpResponse } from "../lib/models/httpResponse";
+import * as Joi from "joi";
+import { SilaWallet } from "../lib/models/wallet";
+import { BankAccount } from "../lib/models/bank";
+import * as Bank from "../lib/controllers/sila";
+import { parseAndValidate } from "../lib/handlers/bodyParser";
 
 // POST Body format validator
 const schema = Joi.object().keys({
+  name: Joi.string().required(),
+  mask: Joi.string().required(),
+  institution: Joi.string().required(),
+  type: Joi.string().required(),
   public_token: Joi.string().required()
 });
 
-async function link(event) {
-  const response = { statusCode: 400 };
+async function link({
+  body: bodyUnvalidated,
+  requestContext: {
+    authorizer: { principalId: userId }
+  }
+}) {
   try {
-    console.log("Event: ", event);
-
     // Parse and validate payload
-    const body = parseAndValidate(event.body, schema);
+    const body = parseAndValidate(bodyUnvalidated, schema);
 
-    // Fetch user_id
-    const userId = event["pathParameters"]["user_id"];
-
-    // Check to make sure that a SILA account has been linked already
-    const [wallet] = await SilaWallet.query()
-      .select("*")
-      .where({ active: 1, app_users_id: userId });
+    // Check to make sure that a SILA account has been created alreadyj
+    const wallet: any = await SilaWallet.query().findOne({
+      active: true,
+      app_users_id: userId
+    });
 
     // Attempt to link the account w/ SILA
     const publicToken = body.public_token;
     const handle = wallet.handle;
-    const key = wallet.private_key;
-    const linkAccount = await bankController.linkAccount(
-      handle,
-      key,
-      publicToken
-    );
+    const linkAccount = await Bank.linkAccount(handle, publicToken, body.name);
     if (!linkAccount || linkAccount.status != "SUCCESS") {
       console.log("Account link error: ", linkAccount);
       throw Error("Failed to link account");
     }
     // Untested
-    await SilaWallet.query()
-      .patch({ bank_linked: true })
-      .where({ handle: handle });
-    response.statusCode = 200;
+    var trx;
+    try {
+      trx = await SilaWallet.transaction.start(SilaWallet.knex());
+      // Set all of the other bank accounts to not be the default
+      await BankAccount.query(trx)
+        .patch({ is_default: false } as any)
+        .where({ sila_wallet_handle: handle });
+      // Add the new bank account (will be default)
+      await BankAccount.query(trx).insert({
+        name: body.name,
+        mask: body.mask,
+        institution: body.institution,
+        type: body.type,
+        sila_wallet_handle: handle
+      } as any);
+      // Make sure the wallet now knows that bank linked is true
+      await SilaWallet.query(trx)
+        .patch({ bank_linked: true } as any)
+        .where({ handle: handle });
+      trx.commit();
+    } catch (err) {
+      trx.rollback();
+      throw err;
+    }
+
+    return new HttpResponse(200);
   } catch (err) {
     console.log("Account link error: ", err);
+    return new HttpResponse(400, err.message);
   }
-  return response;
 }
 
-async function get(event) {
-  const response = { statusCode: 400, body: "" };
+async function get({
+  requestContext: {
+    authorizer: { principalId: userId }
+  }
+}) {
   try {
-    console.log("Event: ", event);
-
-    // Fetch user_id
-    const userId = event["pathParameters"]["user_id"];
-
     // Check to make sure that a SILA account has been linked already
-    const [wallet] = await SilaWallet.query()
-      .select("*")
-      .where({ active: 1, app_users_id: userId });
+    const wallet: any = await SilaWallet.query().findOne({
+      active: true,
+      app_users_id: userId
+    });
 
     // Get accounts
-    // Attempt to link the account w/ SILA
     const handle = wallet.handle;
-    const privateKey = wallet.private_key;
-    const silaAccounts = await bankController.getAccounts(handle, privateKey);
+    const silaAccounts = await Bank.getAccounts(handle);
     console.log("silaAccounts: ", silaAccounts);
     if (!silaAccounts) {
       throw new Error("Failed to get accounts");
     }
-
-    response.statusCode = 200;
-    response.body = JSON.stringify({ accounts: silaAccounts });
+    return new HttpResponse(200, "", { accounts: silaAccounts });
   } catch (err) {
     console.log("Account retreive Error: ", err);
+    return new HttpResponse(400, err.message);
   }
-  return response;
 }
 
 export { link, get };

@@ -6,6 +6,7 @@ frameworkVersion: ">=1.1.0 <2.0.0"
 
 plugins:
   - serverless-offline
+  - serverless-offline-sns
 
 provider:
   name: aws
@@ -20,11 +21,12 @@ provider:
     AWS_KEY: ${env:AWS_KEY}
     AWS_SECRET: ${env:AWS_SECRET}
     AWS_DEPLOY_REGION: ${env:AWS_DEPLOY_REGION}
+    AWS_ENDPOINT: ${env:AWS_ENDPOINT}
     AWS_USER_REGISTERED_TOPIC_ARN: ${env:AWS_USER_REGISTERED_TOPIC_ARN}
+    AWS_LEDGER_ADDED_TOPIC_ARN: ${env:AWS_LEDGER_ADDED_TOPIC_ARN}
     TWILIO_SID: ${env:TWILIO_SID}
     TWILIO_TOKEN: ${env:TWILIO_TOKEN}
     TWILIO_FROM: ${env:TWILIO_FROM}
-    # AWS_USER_WALLET_REGISTERED_TOPIC_ARN:
 
 functions:
   ### USER
@@ -173,7 +175,10 @@ resources:
       Properties:
         BucketName: holdr-${self:provider.stage}-user-photos
         # add additional custom bucket configuration here
-
+custom:
+  serverless-offline-sns:
+    port: 4002
+    debug: false
 
 package:
   excludeDevDependencies: false

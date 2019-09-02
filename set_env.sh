@@ -4,7 +4,7 @@
 export AWS_MYSQL_HOST="database-1-test.c4pfxggmilyu.us-east-1.rds.amazonaws.com"
 export AWS_MYSQL_USERNAME="admin"
 export AWS_MYSQL_DBNAME="ryan_db_local"
-# export AWS_MYSQL_DBNAME="ryan_db_dev"
+export AWS_ENDPOINT="http://127.0.0.1:4002"
 export AWS_MYSQL_PASSWORD="Cody123!"
 
 ### AWS
@@ -21,4 +21,6 @@ export TWILIO_FROM="+19802176789"
 export AWS_USER_REGISTERED_TOPIC_ARN="arn:aws:sns:us-east-1:159043750740:user-registered"
 export AWS_USER_WALLET_REGISTERED_TOPIC_ARN="arn:aws:sns:us-east-1:159043750740:user-wallet-registered"
 export AWS_USER_WALLET_KYC_CHANGED_TOPIC_ARN="arn:aws:sns:us-east-1:159043750740:user-wallet-kyc_changed"
+export AWS_LEDGER_ADDED_TOPIC_ARN="arn:aws:sns:us-east-1:159043750740:ledger-added"
+
 

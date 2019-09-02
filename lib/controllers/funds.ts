@@ -1,9 +1,11 @@
 import { Ledger, LEDGER_TYPE, LEDGER_STATE } from "../models/ledger";
 import { FUND_STATE, TxnController } from "../controllers/txn";
-import * as bankController from "./sila";
+import * as Notification from "./notifications";
 
 /**
- * Transfers funds fromHandle toHanle
+ * Creates a ledger entry for a transfer of ${amount} cents
+ * from ${fromHandle} to ${toHandle}
+ * Does not actually begin any transfer, and sets the reference to null
  *
  * Can Throw
  *
@@ -21,18 +23,10 @@ async function transfer(
   txnId?: number,
   newFundState?: FUND_STATE
 ) {
-  console.log(
-    `TXN(${txnId}) transferring: ${amount} from: ${fromHandle} to: ${toHandle}`
-  );
-  const res = await bankController.transferSila(fromHandle, toHandle, amount);
-
-  console.log("Transfer Sila Res: ", res);
-  const { reference } = res;
-
   await insertLedger(
     fromHandle,
     toHandle,
-    reference,
+    null,
     amount,
     ledgerType,
     txnId,
@@ -40,6 +34,16 @@ async function transfer(
   );
 }
 
+/**
+ * Creates a ledger entry for ${amount} cents to the handle ${toHandle}
+ * Does not actually begin any issuance, and sets the reference to null
+ *
+ *
+ * @param {string} toHandle
+ * @param {number} amount
+ * @param {number} [txnId]
+ * @param {FUND_STATE} [newFundState]
+ */
 async function issue(
   toHandle: string,
   amount: number,
@@ -47,25 +51,35 @@ async function issue(
   newFundState?: FUND_STATE
 ) {
   console.log(`TXN(${txnId}) issuing: ${amount} to: ${toHandle}`);
-  const res = await bankController.issueSila(amount, toHandle);
-  console.log("Issue Sila Result: ", res);
-  const { reference, status } = res;
-  if (status != "SUCCESS") {
-    throw Error(res);
-  }
 
   // Store in ledger
-  await insertLedger(
+  const ledger: any = await insertLedger(
     null,
     toHandle,
-    reference,
+    null,
     amount,
     LEDGER_TYPE.ISSUE,
     txnId,
     newFundState
   );
+
+  // Publish to SNS topic
+  await Notification.ledgerAdded(ledger);
+
+  console.log(`LedgerId(${ledger.id})`);
 }
 
+/**
+ * Inserts a transaction into the ledger
+ *
+ * @param {string} fromHandle
+ * @param {string} toHandle
+ * @param {string} reference
+ * @param {number} amount
+ * @param {LEDGER_TYPE} ledgerType
+ * @param {number} [txnId]
+ * @param {FUND_STATE} [newFundState]
+ */
 async function insertLedger(
   fromHandle: string,
   toHandle: string,
@@ -74,11 +88,11 @@ async function insertLedger(
   ledgerType: LEDGER_TYPE,
   txnId?: number,
   newFundState?: FUND_STATE
-) {
+): Promise<number> {
   var trx;
   try {
     trx = await Ledger.transaction.start(Ledger.knex());
-    await Ledger.insertLedgerAndUpdateBalanceTrx(
+    const ledger = await Ledger.insertLedgerAndUpdateBalanceTrx(
       trx,
       fromHandle,
       toHandle,
@@ -92,6 +106,7 @@ async function insertLedger(
       await TxnController.updateFundState(txnId, newFundState, trx);
     }
     trx.commit();
+    return ledger;
   } catch (err) {
     trx.rollback();
     throw err;

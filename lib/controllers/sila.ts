@@ -21,14 +21,6 @@ async function register(id, info) {
     throw Error(registerRes.message);
   }
 
-  // Request KYC
-  // TODO:  We could move this functionality elsewhere,
-  // Have KYC requesting as a microservice, but then we would
-  // be storing SSNs somewhere else ... easiest thing to do now is
-  // put it here...? Or throw it on an SNS topic...
-  const res = await requestKYC(info, wallet.privateKey);
-  console.log("KYC Result: ", res);
-
   // Save the wallet to the database
   // TODO: Should we move this functionality into wallet.js...?
   // No. The table is separate, and we will have
@@ -50,29 +42,36 @@ async function register(id, info) {
   return true;
 }
 
-async function requestKYC(kycInfo, privateKey) {
-  return sila.requestKYC(kycInfo, privateKey);
+async function requestKYC(kycInfo) {
+  const wallet: any = await SilaWallet.query().findOne({
+    active: true,
+    handle: kycInfo.handle
+  });
+  return sila.requestKYC(kycInfo, wallet.private_key);
 }
 
-async function checkKYC(handle, privateKey) {
-  return sila.checkKYC(handle, privateKey);
+async function checkKYC(handle) {
+  const wallet: any = await SilaWallet.query().findOne({
+    active: true,
+    handle: handle
+  });
+  return sila.checkKYC(handle, wallet.private_key);
 }
 
-function linkAccount(handle, privateKey, publicToken) {
-  return sila.linkAccount(handle, privateKey, publicToken);
+async function linkAccount(handle, publicToken, accountName?) {
+  const wallet: any = await SilaWallet.query().findOne({
+    active: true,
+    handle: handle
+  });
+  return sila.linkAccount(handle, wallet.private_key, publicToken, accountName);
 }
 
-function getAccounts(handle, privateKey) {
-  return sila.getAccounts(handle, privateKey);
-}
-
-async function issueSila(amount, handle) {
+async function getAccounts(handle) {
   const wallet = (await SilaWallet.query().findOne({
     handle: handle,
     active: true
   })) as any;
-  console.log("Issuing sila");
-  return sila.issueSila(amount, handle, wallet.private_key);
+  return sila.getAccounts(handle, wallet.private_key);
 }
 
 async function getTransactions(handle: string, filters?: object) {
@@ -82,20 +81,49 @@ async function getTransactions(handle: string, filters?: object) {
   })) as any;
   return sila.getTransactions(handle, wallet.private_key, filters);
 }
-
-///
-async function transferToFbo(fromHandle, amount) {
-  return transferSila(fromHandle, fboHandle, amount);
+/////////////////////////////
+//       Money moves
+/////////////////////////////
+async function issue(amount, handle, trx?) {
+  const wallet = (await SilaWallet.query(trx)
+    .findOne({
+      handle: handle,
+      active: true
+    })
+    .select(["sila_wallet.*", "bank_account.name as bank_account_name"])
+    .join(
+      "bank_account",
+      "sila_wallet.handle",
+      "bank_account.sila_wallet_handle"
+    )
+    .where({ "bank_account.is_default": true })) as any;
+  console.log("wallet: ", wallet);
+  return sila.issueSila(
+    amount,
+    handle,
+    wallet.private_key,
+    wallet.bank_account_name
+  );
 }
-async function transferSila(fromHandle, toHandle, amount) {
+
+async function redeem(amount, handle, trx?) {
+  const wallet = (await SilaWallet.query(trx).findOne({
+    handle: handle,
+    active: true
+  })) as any;
+  console.log("Redeeming Sila");
+  return sila.redeemSila(amount, handle, wallet.private_key);
+}
+
+async function transfer(fromHandle, toHandle, amount, trx?) {
   console.log("Fromwallet: ", fromHandle);
-  const fromWallet = (await SilaWallet.query()
+  const fromWallet = (await SilaWallet.query(trx)
     .findOne({ handle: fromHandle, active: true })
     .select(["private_key", "active_balance"])) as any;
 
   console.log("Wallet: ", fromWallet);
   console.log("Towallet: ", toHandle);
-  const toWallet = (await SilaWallet.query()
+  const toWallet = (await SilaWallet.query(trx)
     .findOne({ handle: toHandle, active: true })
     .select("handle")) as any;
 
@@ -119,9 +147,9 @@ export {
   checkKYC,
   linkAccount,
   getAccounts,
-  issueSila,
   getTransactions,
-  transferSila,
-  transferToFbo,
+  issue,
+  transfer,
+  redeem,
   fboHandle
 };
