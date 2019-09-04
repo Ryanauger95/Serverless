@@ -1,7 +1,33 @@
 import { sila, fboHandle } from "../handlers/sila";
 import { SilaWallet, KYC_STATE, ACCOUNT_TYPE } from "../models/wallet";
 
-async function register(id, info) {
+class Wallet {
+  address: string;
+  handle: string;
+  private_key: string;
+  active: boolean;
+  kyc_state: KYC_STATE;
+  account_type: ACCOUNT_TYPE;
+  app_users_id: number;
+  constructor(
+    address: string,
+    handle: string,
+    private_key: string,
+    active: boolean,
+    kyc_state: KYC_STATE,
+    account_type: ACCOUNT_TYPE,
+    app_users_id: number
+  ) {
+    this.address = address;
+    this.handle = handle;
+    this.private_key = private_key;
+    this.active = active;
+    this.kyc_state = kyc_state;
+    this.account_type = account_type;
+    this.app_users_id = app_users_id;
+  }
+}
+async function register(id, info): Promise<Wallet> {
   // Generate handle
   const wallet = sila.generateWallet();
   const idAppend = wallet.address.substr(-6);
@@ -25,21 +51,30 @@ async function register(id, info) {
   // TODO: Should we move this functionality into wallet.js...?
   // No. The table is separate, and we will have
   // separate tables for different providers
-  await SilaWallet.insert(
-    {
-      address: wallet.address,
-      handle: handle,
-      private_key: wallet.privateKey,
-      active: 1,
-      kyc_state: KYC_STATE.PENDING,
-      account_type: ACCOUNT_TYPE.USER,
-      app_users_id: id
-    },
-    true
+  // await SilaWallet.insert(
+  //   {
+  //     address: wallet.address,
+  //     handle: handle,
+  //     private_key: wallet.privateKey,
+  //     active: 1,
+  //     kyc_state: KYC_STATE.PENDING,
+  //     account_type: ACCOUNT_TYPE.USER,
+  //     app_users_id: id
+  //   },
+  //   true
+  // );
+  // console.log("Registered Sila Wallet");
+  const newWallet = new Wallet(
+    wallet.address,
+    handle,
+    wallet.privateKey,
+    true,
+    KYC_STATE.NOT_STARTED,
+    ACCOUNT_TYPE.USER,
+    id
   );
-  console.log("Registered Sila Wallet");
 
-  return true;
+  return newWallet;
 }
 
 async function requestKYC(kycInfo) {

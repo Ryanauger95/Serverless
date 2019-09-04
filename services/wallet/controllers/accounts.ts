@@ -77,20 +77,16 @@ async function get({
   }
 }) {
   try {
-    // Check to make sure that a SILA account has been linked already
-    const wallet: any = await SilaWallet.query().findOne({
-      active: true,
-      app_users_id: userId
-    });
+    const bankAccounts = await BankAccount.query()
+      .select(["name", "mask", "institution", "type", "is_default"])
+      .join(
+        "sila_wallet",
+        "sila_wallet.handle",
+        "bank_account.sila_wallet_handle"
+      )
+      .where({ "sila_wallet.app_users_id": userId });
 
-    // Get accounts
-    const handle = wallet.handle;
-    const silaAccounts = await Bank.getAccounts(handle);
-    console.log("silaAccounts: ", silaAccounts);
-    if (!silaAccounts) {
-      throw new Error("Failed to get accounts");
-    }
-    return new HttpResponse(200, "", { accounts: silaAccounts });
+    return new HttpResponse(200, "", { accounts: bankAccounts });
   } catch (err) {
     console.log("Account retreive Error: ", err);
     return new HttpResponse(400, err.message);

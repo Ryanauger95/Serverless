@@ -30,3 +30,11 @@ functions:
     handler: controllers/ledger.execute
     events:
       - schedule: rate(2 minutes)
+  kyc-start_all:
+    handler: controllers/kyc.startAll
+    events:
+      - schedule: rate(2 minutes)
+  kyc-check_all:
+    handler: controllers/kyc.checkAll
+    events:
+      - schedule: rate(2 minutes)

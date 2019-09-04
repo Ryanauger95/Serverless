@@ -15,7 +15,8 @@ const schema = Joi.object().keys({
   zip: Joi.number().required(),
   ssn: Joi.number()
     .integer()
-    .required()
+    .required(),
+  dob: Joi.string().required()
 });
 
 // Accepts the KYC information from the user.
@@ -31,34 +32,59 @@ async function create({
     // Parse and validate payload
     const body = parseAndValidate(bodyUnvalidated, schema);
 
-    // Fetch the user from the database
-    const user: any = await User.query().findById(userId);
-    console.log(user);
+    var trx;
+    try {
+      // Fetch the user from the database
 
-    // Fetch the user's wallet info from the database
-    // and make sure that one does not
-    // Already exist
-    const wallet = await SilaWallet.getActiveWallets(userId);
-    console.log("Active Wallets: ", wallet);
-    if (wallet.length > 0) {
-      throw Error("User already has an active wallet");
+      trx = await User.transaction.start(User.knex());
+      const user: any = await User.query(trx)
+        .findById(userId)
+        .forUpdate();
+
+      // Fetch the user's wallet info from the database
+      // and make sure that one does not
+      // Already exist
+      const wallet: any = await SilaWallet.query(trx)
+        .findOne({ app_users_id: userId, active: true })
+        .forUpdate();
+      if (wallet != undefined) {
+        console.log("Wallet: ", wallet);
+        throw Error(`User(${userId}) already has an active wallet`);
+      }
+
+      // Register with our banking provider
+      // Abstracted away banking provider into
+      // bankController
+      const newWallet = await bankController.register(userId, {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        address: body.address_1,
+        address_2: body.address_2,
+        city: body.city,
+        state: body.state,
+        zip: String(body.zip),
+        ssn: String(body.ssn),
+        dob: body.dob
+      });
+
+      // Save
+      await SilaWallet.query(trx).insert({
+        address: newWallet.address,
+        handle: newWallet.handle,
+        private_key: newWallet.private_key,
+        active: newWallet.active,
+        kyc_state: newWallet.kyc_state,
+        account_type: newWallet.account_type,
+        app_users_id: newWallet.app_users_id
+      } as any);
+      trx.commit();
+    } catch (err) {
+      console.log("Error in Trx: ", err);
+      trx.rollback();
+      throw err;
     }
-
-    // Register with our banking provider
-    // Abstracted away banking provider into
-    // bankController
-    await bankController.register(userId, {
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      phone: user.phone,
-      address: body.address_1,
-      address_2: body.address_2,
-      city: body.city,
-      state: body.state,
-      zip: String(body.zip),
-      ssn: String(body.ssn)
-    });
 
     // Post to an SNS topic that a wallet has been created
     const res = await SNS.publish(

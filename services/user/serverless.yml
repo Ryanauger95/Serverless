@@ -51,6 +51,13 @@ functions:
           method: get
           cors: true
           authorizer: user-authorizer
+  user-search:
+    handler: controllers/search.search
+    events:
+      - http:
+          path: user/search
+          method: get
+          cors: true
   user-update:
     handler: controllers/update.update
     events:

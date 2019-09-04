@@ -1,8 +1,8 @@
 // Import DB Connection
-import { Model } from "../handlers/mysql";
+import { BaseModel } from "../handlers/mysql";
 import { PartialUpdate } from "objection";
 
-class User extends Model {
+class User extends BaseModel {
   // Table name is the only required property.
   static get tableName() {
     return "app_users";

@@ -1,5 +1,5 @@
 import { Ledger, LEDGER_STATE } from "../lib/models/ledger";
-import { LEDGER_TYPE } from "../../transfer/lib/models/ledger";
+import { LEDGER_TYPE } from "../lib/models/ledger";
 import * as Bank from "../lib/controllers/sila";
 
 /**
